@@ -1,0 +1,32 @@
+service: outlook-google-sync
+
+provider:
+  name: aws
+  runtime: nodejs4.3
+  stage: dev
+  region: ap-northeast-2
+
+  apiKeys:
+    - sync-api-key
+
+functions:
+  login:
+    handler: app.login
+    timeout: 15
+    events:
+      - http:
+          path: login
+          method: get
+          cors: true
+          private: false
+  authorize:
+    handler: app.authorize
+    timeout: 15
+    events:
+      - http:
+          path: authorize
+          method: get
+          cors: true
+          private: false
+plugins:
+  - serverless-webpack
