@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import _ from 'lodash';
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
@@ -11,30 +12,30 @@ const getQueueUrl = queueName => new Promise((resolve, reject) => {
   });
 });
 
-const fetchMessage = queueUrl => new Promise((resolve, reject) => {
+const fetchMessage = queueName =>
+  getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
+    const sqs = new AWS.SQS();
+    sqs.receiveMessage({ QueueUrl: url }, (err, data) => {
+      if (err) reject(err);
+      else if (_.empty(data)) reject('Token is empty');
+      else resolve(data);
+    });
+  }));
+
+const sendMessage = (queueName, message) => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
-  sqs.receiveMessage({ QueueUrl: queueUrl }, (err, data) => {
+  sqs.sendMessage({ QueueUrl: url, MessageBody: message }, (err, data) => {
+    if (err) reject(err);
+    else resolve(data);
+  });
+}));
+
+const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
+  const sns = new AWS.SNS();
+  sns.publish({ TopicArn: topicArn, Message: message }, (err, data) => {
     if (err) reject(err);
     else resolve(data);
   });
 });
 
-const sendMessage = (queueUrl, message) => {
-  new Promise((resolve, reject) => {
-    const sqs = new AWS.SQS();
-    sqs.sendMessage({ QueueUrl: queueUrl, MessageBody: message }, (err, data) => {
-      if (err) reject(err);
-      else resolve(data);
-    });
-  });
-};
-
-const sendTopic = (topicName, message) => {
-  new Promise((resolve, reject) => {
-    const sns = new AWS.SNS();
-    sns.publish({ TopicArn: topicName, Message: message }, (err, data) => {
-      if (err) reject(err);
-      else resolve(data);
-    });
-  });
-};
+export { sendTopic, sendMessage, fetchMessage, getQueueUrl };

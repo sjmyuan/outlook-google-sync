@@ -1,13 +1,30 @@
 service: outlook-google-sync
 
+custom:
+  redirect_path: 'authorize'
+  scope: 'openid,offline_access,Calendars.Read'
+  queue_name: 'token_queue'
+  stageVariables:
+    redirect_path: ${self:custom.redirect_path}
+    scope: ${self:custom.scope} 
+    queue_name: ${self:custom.queue_name} 
+
 provider:
   name: aws
   runtime: nodejs4.3
   stage: dev
   region: ap-northeast-2
-
-  apiKeys:
-    - sync-api-key
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:ListBucket"
+        - "s3:Put*"
+        - "s3:GetObject"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "sqs:*"
+      Resource: "*"
 
 functions:
   login:
@@ -28,5 +45,18 @@ functions:
           method: get
           cors: true
           private: false
+  refreshToken:
+    handler: app.refresh_token 
+    environment:
+      queue_name: ${self:custom.queue_name}
+    events:
+      - schedule: rate(2 minutes)
+resources:
+  Resources:
+    TokenQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.queue_name}
 plugins:
   - serverless-webpack
+  - serverless-plugin-stage-variables
