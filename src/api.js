@@ -7,7 +7,7 @@ const getQueueUrl = queueName => new Promise((resolve, reject) => {
     if (err) {
       reject(err);
     } else {
-      resolve(data);
+      resolve(data.QueueUrl);
     }
   });
 });
@@ -17,7 +17,7 @@ const fetchMessage = queueName =>
     const sqs = new AWS.SQS();
     sqs.receiveMessage({ QueueUrl: url }, (err, data) => {
       if (err) reject(err);
-      else if (_.empty(data)) reject('Token is empty');
+      else if (_.isEmpty(data)) reject('Token is empty');
       else resolve(data);
     });
   }));
