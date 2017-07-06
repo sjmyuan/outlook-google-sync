@@ -50,7 +50,7 @@ functions:
     environment:
       queue_name: ${self:custom.queue_name}
     events:
-      - schedule: rate(2 minutes)
+      - schedule: rate(30 minutes)
 resources:
   Resources:
     TokenQueue:

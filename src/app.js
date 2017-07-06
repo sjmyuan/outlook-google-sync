@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
-import { fetchMessage, sendMessage, sendTopic } from './api';
+import { fetchMessage, sendMessage, sendTopic, purgeQueue } from './api';
 
 module.exports.login = (event, context, cb) => {
   const scope = _.get(event, 'stageVariables.scope');
@@ -35,22 +35,14 @@ module.exports.authorize = (event, context, cb) => {
 module.exports.refresh_token = (event) => {
   const queueName = process.env.queue_name;
   fetchMessage(queueName).then((message) => {
-    console.log(`The message is ${message}`);
-    const token = JSON.parse(message);
-    console.log(`The token is ${message}`);
+    console.log('The message is');
+    console.log(message);
+    const token = JSON.parse(message.Messages[0].Body);
+    console.log('The token is');
+    console.log(token);
     return refreshAccessToken(token.token.refresh_token);
-  }).then(token => sendMessage(queueName, JSON.stringify(token))).catch((error) => {
+  }).then(token => purgeQueue(queueName).then(data => sendMessage(queueName, JSON.stringify(token)))).catch((error) => {
     console.log(`Failed to refresh token, error message is ${error}`);
   });
   return true;
 };
-
-// module.exports.synchronize_event = (event) => {
-  // fetchOutlookEvents(event.token, 7 days).then((events)=>{
-    // Promise.all(
-      // _.map(events,(event)=> createGmailEvent(composeGmailEvent(event)))
-    // )
-  // }).then(error=>{
-    // console.log('Failed to synchronize event')
-  // })
-// };

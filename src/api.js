@@ -17,7 +17,7 @@ const fetchMessage = queueName =>
     const sqs = new AWS.SQS();
     sqs.receiveMessage({ QueueUrl: url }, (err, data) => {
       if (err) reject(err);
-      else if (_.isEmpty(data)) reject('Token is empty');
+      else if (_.isEmpty(data.Messages)) reject('Token is empty');
       else resolve(data);
     });
   }));
@@ -25,6 +25,14 @@ const fetchMessage = queueName =>
 const sendMessage = (queueName, message) => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
   sqs.sendMessage({ QueueUrl: url, MessageBody: message }, (err, data) => {
+    if (err) reject(err);
+    else resolve(data);
+  });
+}));
+
+const purgeQueue = queueName => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
+  const sqs = new AWS.SQS();
+  sqs.purgeQueue({ QueueUrl: url }, (err, data) => {
     if (err) reject(err);
     else resolve(data);
   });
@@ -38,4 +46,4 @@ const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
   });
 });
 
-export { sendTopic, sendMessage, fetchMessage, getQueueUrl };
+export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue };
