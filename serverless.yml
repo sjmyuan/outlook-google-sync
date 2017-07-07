@@ -2,12 +2,16 @@ service: outlook-google-sync
 
 custom:
   redirect_path: 'authorize'
-  scope: 'openid,offline_access,Calendars.Read'
-  queue_name: 'token_queue'
+  outlook_scope: 'openid,offline_access,Calendars.Read'
+  google_scope: 'https://www.googleapis.com/auth/calendar'
+  outlook_queue_name: 'outlook_token_queue'
+  google_queue_name: 'google_token_queue'
   stageVariables:
     redirect_path: ${self:custom.redirect_path}
-    scope: ${self:custom.scope} 
-    queue_name: ${self:custom.queue_name} 
+    outlook_scope: ${self:custom.outlook_scope} 
+    google_scope: ${self:custom.google_scope} 
+    outlook_queue_name: ${self:custom.outlook_queue_name} 
+    google_queue_name: ${self:custom.google_queue_name} 
 
 provider:
   name: aws
@@ -27,36 +31,59 @@ provider:
       Resource: "*"
 
 functions:
-  login:
-    handler: app.login
+  outlookLogin:
+    handler: app.outlook_login
     timeout: 15
     events:
       - http:
-          path: login
+          path: outlook/login
           method: get
           cors: true
           private: false
-  authorize:
-    handler: app.authorize
+  outlookAuthorize:
+    handler: app.outlook_authorize
     timeout: 15
     events:
       - http:
-          path: authorize
+          path: outlook/authorize
+          method: get
+          cors: true
+          private: false
+  googleLogin:
+    handler: app.google_login
+    timeout: 15
+    events:
+      - http:
+          path: google/login
+          method: get
+          cors: true
+          private: false
+  googleAuthorize:
+    handler: app.google_authorize
+    timeout: 15
+    events:
+      - http:
+          path: google/authorize
           method: get
           cors: true
           private: false
   refreshToken:
     handler: app.refresh_token 
     environment:
-      queue_name: ${self:custom.queue_name}
+      outlook_queue_name: ${self:custom.outlook_queue_name}
+      google_queue_name: ${self:custom.google_queue_name}
     events:
       - schedule: rate(30 minutes)
 resources:
   Resources:
-    TokenQueue:
+    OutlookTokenQueue:
       Type: "AWS::SQS::Queue"
       Properties:
-        QueueName: ${self:custom.queue_name}
+        QueueName: ${self:custom.outlook_queue_name}
+    GoogleTokenQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.google_queue_name}
 plugins:
   - serverless-webpack
   - serverless-plugin-stage-variables

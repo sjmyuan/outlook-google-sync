@@ -1,7 +1,6 @@
 import _ from 'lodash';
-import oauth2 from './credential';
 
-const getAuthUrl = (redirect_uri, scope) => {
+const getAuthUrl = (oauth2, redirect_uri, scope) => {
   const returnVal = oauth2.authorizationCode.authorizeURL({
     redirect_uri,
     scope,
@@ -10,7 +9,7 @@ const getAuthUrl = (redirect_uri, scope) => {
   return returnVal;
 };
 
-const getTokenFromCode = (auth_code, redirect_uri, scope, callback) => new Promise((resolve, reject) => {
+const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope, callback) => new Promise((resolve, reject) => {
   oauth2.authorizationCode.getToken({
     code: auth_code,
     redirect_uri,
@@ -25,7 +24,7 @@ const getTokenFromCode = (auth_code, redirect_uri, scope, callback) => new Promi
   });
 });
 
-const refreshAccessToken = refreshToken => new Promise((resolve, reject) => {
+const refreshAccessToken = (oauth2, refreshToken) => new Promise((resolve, reject) => {
   const tokenObj = oauth2.accessToken.create({ refresh_token: refreshToken });
   tokenObj.refresh((err, token) => {
     if (err) {

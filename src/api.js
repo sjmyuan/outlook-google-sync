@@ -2,6 +2,7 @@ import AWS from 'aws-sdk';
 import _ from 'lodash';
 
 const MicrosoftGraph = require('../node_modules/@microsoft/microsoft-graph-client/lib/src/index.js');
+//const MicrosoftGraph = require('@microsoft/microsoft-graph-client');
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();

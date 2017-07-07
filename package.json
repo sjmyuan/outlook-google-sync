@@ -47,6 +47,7 @@
     "babel-preset-stage-0": "^6.16.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^7.0.0",
+    "crypto": "0.0.3",
     "eslint": "^3.9.1",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-config-standard": "^6.2.1",
