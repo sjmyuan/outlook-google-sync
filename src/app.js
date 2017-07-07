@@ -46,3 +46,15 @@ module.exports.refresh_token = (event) => {
   });
   return true;
 };
+
+modele.exports.sync_events = (event) => {
+  const syncDays = process.env.sync_days;
+  const queueName = process.env.queue_name;
+  fetchMessage(queueName).then(token => fetchNoSyncEvents(token.token.access_token, sync_days))
+    .then(events => Promise.all(_.map(events, outlookEvent => createGmailEventFromOutlookEvent(outlookEvent))))
+    .then((data) => {
+      console.log('Success to synchronize events');
+    }).catch((err) => {
+      console.log(`Failed to synchronize events, error message is ${err}`);
+    });
+};

@@ -1,6 +1,8 @@
 import AWS from 'aws-sdk';
 import _ from 'lodash';
 
+const MicrosoftGraph = require('../node_modules/@microsoft/microsoft-graph-client/lib/src/index.js');
+
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
   sqs.getQueueUrl({ QueueName: queueName }, (err, data) => {
@@ -46,4 +48,28 @@ const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
   });
 });
 
-export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue };
+const fetchNoSyncEvents = (token, days) => new Promise((resolve, reject) => {
+  const client = MicrosoftGraph.Client.init({
+    debugLogging: true,
+    authProvider: (done) => {
+      done(null, token);
+    },
+  });
+  const startDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  console.log(`start date is ${startDate.toISOString()}`);
+  const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+  console.log(`end date is ${endDate.toISOString()}`);
+  return client.api(`/me/calendarview?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}`)
+    .headers({ Prefer: 'outlook.timezone="China Standard Time"' })
+    .select('subject,start,end,responseStatus,isCancelled')
+    .get((err, res) => {
+      if (err) {
+        reject(err);
+      } else {
+        console.log(res);
+        resolve(res);
+      }
+    });
+});
+
+export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue, fetchNoSyncEvents };
