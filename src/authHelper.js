@@ -4,6 +4,7 @@ const getAuthUrl = (oauth2, redirect_uri, scope) => {
   const returnVal = oauth2.authorizationCode.authorizeURL({
     redirect_uri,
     scope,
+    access_type: 'offline',
   });
   console.log(`Generated auth url: ${returnVal}`);
   return returnVal;
@@ -19,7 +20,7 @@ const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope, callback) => n
       reject(`getTokenFromCod error ${error}`);
     } else {
       const token = oauth2.accessToken.create(result);
-      console.log(token)
+      console.log(token);
       resolve(token);
     }
   });

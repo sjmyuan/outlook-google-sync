@@ -3,8 +3,6 @@ import _ from 'lodash';
 import rp from 'request-promise-native';
 import uuid from 'node-uuid';
 
-const MicrosoftGraph = require('../node_modules/@microsoft/microsoft-graph-client/lib/src/index.js');
-
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
   sqs.getQueueUrl({ QueueName: queueName }, (err, data) => {
