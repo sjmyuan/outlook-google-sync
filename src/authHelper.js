@@ -5,6 +5,7 @@ const getAuthUrl = (oauth2, redirect_uri, scope) => {
     redirect_uri,
     scope,
     access_type: 'offline',
+    prompt: 'consent',
   });
   console.log(`Generated auth url: ${returnVal}`);
   return returnVal;
@@ -34,7 +35,12 @@ const refreshAccessToken = (oauth2, refreshToken) => new Promise((resolve, rejec
     } else if (_.isNull(token)) {
       reject('Token is null');
     } else {
-      resolve(token);
+      const newToken = _.cloneDeep(token);
+      if (_.isUndefined(newToken.token.refresh_token)) {
+        console.log('refresh token is undefined');
+        newToken.token.refresh_token = refreshToken;
+      }
+      resolve(newToken);
     }
   });
 });

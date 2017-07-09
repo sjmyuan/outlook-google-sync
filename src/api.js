@@ -40,6 +40,15 @@ const purgeQueue = queueName => getQueueUrl(queueName).then(url => new Promise((
   });
 }));
 
+const deleteMessages = (queueName, messages) => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
+  const sqs = new AWS.SQS();
+  const entries = _.map(messages, message => ({ Id: message.Id, ReceiptHandle: message.ReceiptHandle }));
+  sqs.deleteMessageBatch({ QueueUrl: url, Entries: entries }, (err, data) => {
+    if (err) reject(err);
+    else resolve(data);
+  });
+}));
+
 const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
   const sns = new AWS.SNS();
   sns.publish({ TopicArn: topicArn, Message: message }, (err, data) => {
@@ -76,7 +85,7 @@ const fetchGoogleEvents = (token, days) => {
   const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
   console.log(`end date is ${endDate.toISOString()}`);
   const uri = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}&singleEvents=true`;
-  console.log('uri is '+uri)
+  console.log(`uri is ${uri}`);
   const option = {
     method: 'GET',
     uri,
@@ -88,4 +97,12 @@ const fetchGoogleEvents = (token, days) => {
   return rp(option);
 };
 
-export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue, fetchOutlookEvents, fetchGoogleEvents };
+export { sendTopic,
+  sendMessage,
+  fetchMessage,
+  getQueueUrl,
+  purgeQueue,
+  fetchOutlookEvents,
+  fetchGoogleEvents,
+  deleteMessages,
+};

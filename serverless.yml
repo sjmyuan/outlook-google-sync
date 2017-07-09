@@ -74,6 +74,13 @@ functions:
       google_queue_name: ${self:custom.google_queue_name}
     events:
       - schedule: rate(30 minutes)
+  syncEvents:
+    handler: app.sync_events
+    environment:
+      outlook_queue_name: ${self:custom.outlook_queue_name}
+      google_queue_name: ${self:custom.google_queue_name}
+    events:
+      - schedule: rate(2 minutes)
 resources:
   Resources:
     OutlookTokenQueue:
