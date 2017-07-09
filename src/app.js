@@ -1,10 +1,7 @@
 import _ from 'lodash';
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
-import { fetchMessage, sendMessage, sendTopic, purgeQueue, fetchNoSyncEvents } from './api';
-// import { googleAuth, outlookAuth } from './credential';
-import outlookAuth from './credential';
-
-const googleAuth = null;
+import { fetchMessage, sendMessage, sendTopic, purgeQueue } from './api';
+import { googleAuth, outlookAuth } from './credential';
 
 module.exports.outlook_login = (event, context, cb) => {
   const scope = _.get(event, 'stageVariables.outlook_scope');
@@ -86,15 +83,15 @@ module.exports.refresh_token = (event) => {
   return true;
 };
 
-modele.exports.sync_events = (event) => {
-  const syncDays = process.env.sync_days;
-  const queueName = process.env.queue_name;
-  fetchMessage(queueName).then(token => fetchNoSyncEvents(token.token.access_token, syncDays))
-    .then(events => Promise.all(_.map(events, outlookEvent => createGmailEventFromOutlookEvent(outlookEvent))))
-    .then((data) => {
-      console.log('Success to synchronize events');
-    })
-    .catch((err) => {
-      console.log(`Failed to synchronize events, error message is ${err}`);
-    });
-};
+// modele.exports.sync_events = (event) => {
+  // const syncDays = process.env.sync_days;
+  // const queueName = process.env.queue_name;
+  // fetchMessage(queueName).then(token => fetchNoSyncEvents(token.token.access_token, syncDays))
+    // .then(events => Promise.all(_.map(events, outlookEvent => createGmailEventFromOutlookEvent(outlookEvent))))
+    // .then((data) => {
+      // console.log('Success to synchronize events');
+    // })
+    // .catch((err) => {
+      // console.log(`Failed to synchronize events, error message is ${err}`);
+    // });
+// };

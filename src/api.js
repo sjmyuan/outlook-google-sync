@@ -1,8 +1,9 @@
 import AWS from 'aws-sdk';
 import _ from 'lodash';
+import rp from 'request-promise-native';
+import uuid from 'node-uuid';
 
 const MicrosoftGraph = require('../node_modules/@microsoft/microsoft-graph-client/lib/src/index.js');
-//const MicrosoftGraph = require('@microsoft/microsoft-graph-client');
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
@@ -49,28 +50,26 @@ const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
   });
 });
 
-const fetchNoSyncEvents = (token, days) => new Promise((resolve, reject) => {
-  const client = MicrosoftGraph.Client.init({
-    debugLogging: true,
-    authProvider: (done) => {
-      done(null, token);
-    },
-  });
+const fetchNoSyncEvents = (token, days) => {
   const startDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
   console.log(`start date is ${startDate.toISOString()}`);
   const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
   console.log(`end date is ${endDate.toISOString()}`);
-  return client.api(`/me/calendarview?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}`)
-    .headers({ Prefer: 'outlook.timezone="China Standard Time"' })
-    .select('subject,start,end,responseStatus,isCancelled')
-    .get((err, res) => {
-      if (err) {
-        reject(err);
-      } else {
-        console.log(res);
-        resolve(res);
-      }
-    });
-});
+  const uri = `https://graph.microsoft.com/v1.0/me/calendarview?startdatetime=${startDate.toISOString()}&enddatetime=${endDate.toISOString()}`;
+  const option = {
+    method: 'GET',
+    uri,
+    headers: {
+      Prefer: ['outlook.timezone="China Standard Time"'],
+      Accept: 'application/json',
+      'User-Agent': 'outlook-google-sync',
+      'client-request-id': uuid.v4(),
+      'return-client-request-id': 'true',
+      authorization: `Bearer ${token}`,
+    },
+    json: true,
+  };
+  return rp(option);
+};
 
 export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue, fetchNoSyncEvents };

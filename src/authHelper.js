@@ -19,6 +19,7 @@ const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope, callback) => n
       reject(`getTokenFromCod error ${error}`);
     } else {
       const token = oauth2.accessToken.create(result);
+      console.log(token)
       resolve(token);
     }
   });
