@@ -19,7 +19,6 @@ const fetchMessage = queueName =>
     const sqs = new AWS.SQS();
     sqs.receiveMessage({ QueueUrl: url }, (err, data) => {
       if (err) reject(err);
-      else if (_.isEmpty(data.Messages)) reject('Token is empty');
       else resolve(data);
     });
   }));
@@ -58,7 +57,7 @@ const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
 });
 
 const fetchOutlookEvents = (token, days) => {
-  const startDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const startDate = new Date();
   console.log(`start date is ${startDate.toISOString()}`);
   const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
   console.log(`end date is ${endDate.toISOString()}`);
@@ -67,7 +66,7 @@ const fetchOutlookEvents = (token, days) => {
     method: 'GET',
     uri,
     headers: {
-      Prefer: ['outlook.timezone="China Standard Time"'],
+      Prefer: ['outlook.timezone="Asia/Shanghai"'],
       Accept: 'application/json',
       'User-Agent': 'outlook-google-sync',
       'client-request-id': uuid.v4(),
@@ -76,7 +75,10 @@ const fetchOutlookEvents = (token, days) => {
     },
     json: true,
   };
-  return rp(option);
+  return rp(option).then((events) => {
+    console.log(events.value[0].start);
+    return events;
+  });
 };
 
 const fetchGoogleEvents = (token, days) => {
@@ -97,6 +99,37 @@ const fetchGoogleEvents = (token, days) => {
   return rp(option);
 };
 
+const convertOutlookToGoogle = event => ({
+  summary: event.subject,
+  location: '',
+  description: event.bodyPreview,
+  start: event.start,
+  end: event.end,
+  recurrence: [],
+  attendees: [],
+  reminders: {
+    useDefault: false,
+    overrides: [
+      { method: 'popup', minutes: 10 },
+    ],
+  },
+});
+
+const createGoogleEvent = (event, token) => {
+  const uri = 'https://www.googleapis.com/calendar/v3/calendars/primary/events?sendNotifications=true';
+  console.log(`uri is ${uri}`);
+  const option = {
+    method: 'POST',
+    uri,
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    json: true,
+    body: event,
+  };
+  return rp(option);
+};
+
 export { sendTopic,
   sendMessage,
   fetchMessage,
@@ -105,4 +138,6 @@ export { sendTopic,
   fetchOutlookEvents,
   fetchGoogleEvents,
   deleteMessages,
+  convertOutlookToGoogle,
+  createGoogleEvent,
 };

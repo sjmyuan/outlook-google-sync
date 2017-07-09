@@ -6,6 +6,8 @@ custom:
   google_scope: 'https://www.googleapis.com/auth/calendar'
   outlook_queue_name: 'outlook_token_queue'
   google_queue_name: 'google_token_queue'
+  processed_queue_name: 'processed_token_queue'
+  sync_days: 7
   stageVariables:
     redirect_path: ${self:custom.redirect_path}
     outlook_scope: ${self:custom.outlook_scope} 
@@ -79,6 +81,8 @@ functions:
     environment:
       outlook_queue_name: ${self:custom.outlook_queue_name}
       google_queue_name: ${self:custom.google_queue_name}
+      processed_queue_name: ${self:custom.processed_queue_name}
+      sync_days: ${self:custom.sync_days}
     events:
       - schedule: rate(2 minutes)
 resources:
@@ -91,6 +95,10 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: ${self:custom.google_queue_name}
+    ProcesseQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.processed_queue_name}
 plugins:
   - serverless-webpack
   - serverless-plugin-stage-variables

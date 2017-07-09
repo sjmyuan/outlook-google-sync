@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
-import { fetchMessage, sendMessage, sendTopic, purgeQueue, fetchGoogleEvents, fetchOutlookEvents } from './api';
+import { fetchMessage, sendMessage, deleteMessages, purgeQueue, fetchGoogleEvents, fetchOutlookEvents, createGoogleEvent, convertOutlookToGoogle } from './api';
 import { googleAuth, outlookAuth } from './credential';
 
 module.exports.outlook_login = (event, context, cb) => {
@@ -35,17 +35,11 @@ module.exports.outlook_authorize = (event, context, cb) => {
 };
 
 module.exports.google_login = (event, context, cb) => {
-  console.log('1');
   const scope = _.get(event, 'stageVariables.google_scope');
-  console.log('2');
   const redirectPath = _.get(event, 'stageVariables.redirect_path');
-  console.log('3');
   const stage = _.get(event, 'requestContext.stage');
-  console.log('4');
   const authUrl = getAuthUrl(googleAuth, `https://${event.headers.Host}/${stage}/google/${redirectPath}`, scope.replace(/,/g, ' '));
-  console.log('5');
   cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${authUrl}">sign in</a> with your Gmail account.</p>` });
-  console.log('6');
   return true;
 };
 
@@ -71,25 +65,35 @@ module.exports.google_authorize = (event, context, cb) => {
   return true;
 };
 module.exports.refresh_token = (event) => {
-  const oulookQueueName = process.env.outlook_queue_name;
+  const outlookQueueName = process.env.outlook_queue_name;
   const googleQueueName = process.env.google_queue_name;
   Promise.all([
-    fetchMessage(oulookQueueName).then((message) => {
+    fetchMessage(outlookQueueName).then((message) => {
       console.log('The outlook message is');
       console.log(message);
+      if (_.isEmpty(message.Messages)) {
+        return Promise.reject('Outlook token is empty');
+      }
       const token = JSON.parse(message.Messages[0].Body);
       console.log('The outlook token is');
       console.log(token);
-      return refreshAccessToken(outlookAuth, token.token.refresh_token);
-    }).then(token => purgeQueue(oulookQueueName).then(data => sendMessage(oulookQueueName, JSON.stringify(token)))),
+      return refreshAccessToken(outlookAuth, token.token.refresh_token)
+        .then(data => sendMessage(outlookQueueName, JSON.stringify(data)))
+        .then(() => deleteMessages(outlookQueueName, message.Messages));
+    }),
     fetchMessage(googleQueueName).then((message) => {
       console.log('The google message is');
       console.log(message);
+      if (_.isEmpty(message.Messages)) {
+        return Promise.reject('Google token is empty');
+      }
       const token = JSON.parse(message.Messages[0].Body);
       console.log('The google token is');
       console.log(token);
-      return refreshAccessToken(googleAuth, token.token.refresh_token);
-    }).then(token => purgeQueue(googleQueueName).then(data => sendMessage(googleQueueName, JSON.stringify(token)))),
+      return refreshAccessToken(googleAuth, token.token.refresh_token)
+        .then(data => sendMessage(googleQueueName, JSON.stringify(data)))
+        .then(() => deleteMessages(googleQueueName, message.Messages));
+    }),
   ]).then((data) => {
     console.log('Success to refresh token');
   }).catch((err) => {
@@ -102,12 +106,39 @@ module.exports.sync_events = (event) => {
   const syncDays = process.env.sync_days;
   const outlookQueueName = process.env.outlook_queue_name;
   const googleQueueName = process.env.google_queue_name;
+  const processedQueueName = process.env.processed_queue_name;
   Promise.all([
-    fetchMessage(outlookQueueName).then(token => fetchOutlookEvents(token.token.access_token, syncDays)),
-    fetchMessage(googleQueueName).then(token => fetchGoogleEvents(token.token.access_token, syncDays)),
+    fetchMessage(outlookQueueName).then((data) => {
+      if (_.isEmpty(data.Messages)) {
+        return Promise.reject('Outlook token is empty');
+      }
+      return data;
+    }),
+    fetchMessage(googleQueueName).then((data) => {
+      if (_.isEmpty(data.Messages)) {
+        return Promise.reject('Google token is empty');
+      }
+      return data;
+    }),
+    fetchMessage(processedQueueName).then(message => _.map(message.Messages, ele => ele.Body)),
   ]).then((data) => {
-    console.log(`outlook event is ${data[0]}`);
-    console.log(`google event is ${data[1]}`);
+    console.log('outlook token is');
+    console.log(data[0]);
+    console.log('google token is');
+    console.log(data[1]);
+    console.log('processed event is');
+    console.log(data[2]);
+    const outlookToken = JSON.parse(data[0].Messages[0].Body);
+    const googleToken = JSON.parse(data[1].Messages[0].Body);
+    return fetchOutlookEvents(outlookToken.token.access_token, syncDays)
+    .then((outlookEvents) => {
+      const newEvents = _.filter(outlookEvents.value, message => !_.includes(data[1], message.id));
+      console.log(`Unprocessed events ${newEvents}`);
+      return Promise.all(_.map(newEvents, (message) => {
+        createGoogleEvent(convertOutlookToGoogle(message), googleToken.token.access_token)
+          .then(() => sendMessage(processedQueueName, message.id));
+      }));
+    });
   }).catch((err) => {
     console.log(`Failed to sync events, error message is ${err}`);
   });
