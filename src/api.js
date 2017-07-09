@@ -48,7 +48,7 @@ const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
   });
 });
 
-const fetchNoSyncEvents = (token, days) => {
+const fetchOutlookEvents = (token, days) => {
   const startDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
   console.log(`start date is ${startDate.toISOString()}`);
   const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
@@ -70,4 +70,22 @@ const fetchNoSyncEvents = (token, days) => {
   return rp(option);
 };
 
-export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue, fetchNoSyncEvents };
+const fetchGoogleEvents = (token, days) => {
+  const startDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  console.log(`start date is ${startDate.toISOString()}`);
+  const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+  console.log(`end date is ${endDate.toISOString()}`);
+  const uri = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}&singleEvents=true`;
+  console.log('uri is '+uri)
+  const option = {
+    method: 'GET',
+    uri,
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    json: true,
+  };
+  return rp(option);
+};
+
+export { sendTopic, sendMessage, fetchMessage, getQueueUrl, purgeQueue, fetchOutlookEvents, fetchGoogleEvents };
