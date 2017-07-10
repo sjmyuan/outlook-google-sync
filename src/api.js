@@ -2,6 +2,7 @@ import AWS from 'aws-sdk';
 import _ from 'lodash';
 import rp from 'request-promise-native';
 import uuid from 'node-uuid';
+import rooms from './rooms.js';
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
@@ -104,14 +105,16 @@ const fetchGoogleEvents = (token, days) => {
   return rp(option);
 };
 
-const convertOutlookToGoogle = event => ({
+const convertOutlookToGoogle = (event, room) => ({
   summary: event.subject,
-  location: '',
+  location: room.title,
   description: event.bodyPreview,
   start: event.start,
   end: event.end,
   recurrence: [],
-  attendees: [],
+  attendees: [{
+    email: room.id,
+  }],
   reminders: {
     useDefault: false,
     overrides: [
@@ -135,6 +138,33 @@ const createGoogleEvent = (event, token) => {
   return rp(option);
 };
 
+const getAvailableRoom = (start, end, token) => {
+  const uri = 'https://www.googleapis.com/calendar/v3/freeBusy';
+  const option = {
+    method: 'POST',
+    uri,
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    json: true,
+    body: {
+      timeMin: start,
+      timeMax: end,
+      timeZone: 'Asia/Shanghai',
+      items: rooms,
+    },
+  };
+  return rp(option).then((data) => {
+    console.log('free busy data is ');
+    console.log(data);
+    const availableRoom = _.find(rooms, room => _.isEmpty(data.calendars[room.id].busy));
+    if (_.isUndefined(availableRoom)) {
+      return Promise.reject('There is no available room');
+    }
+    return availableRoom;
+  });
+};
+
 export { sendTopic,
   sendMessage,
   fetchMessage,
@@ -145,4 +175,5 @@ export { sendTopic,
   deleteMessages,
   convertOutlookToGoogle,
   createGoogleEvent,
+  getAvailableRoom,
 };

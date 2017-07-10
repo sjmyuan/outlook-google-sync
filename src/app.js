@@ -1,6 +1,14 @@
 import _ from 'lodash';
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
-import { fetchMessage, sendMessage, deleteMessages, purgeQueue, fetchGoogleEvents, fetchOutlookEvents, createGoogleEvent, convertOutlookToGoogle } from './api';
+import { fetchMessage,
+  sendMessage,
+  deleteMessages,
+  purgeQueue,
+  fetchGoogleEvents,
+  fetchOutlookEvents,
+  createGoogleEvent,
+  getAvailableRoom,
+  convertOutlookToGoogle } from './api';
 import { googleAuth, outlookAuth } from './credential';
 
 module.exports.outlook_login = (event, context, cb) => {
@@ -150,7 +158,8 @@ module.exports.sync_events = (event) => {
         .then(() => Promise.all(
           _.map(
             newEvents,
-            message => createGoogleEvent(convertOutlookToGoogle(message), googleToken.token.access_token),
+            message => getAvailableRoom(message.start, message.end, googleToken.token.access_token)
+              .then(room => createGoogleEvent(convertOutlookToGoogle(message, room), googleToken.token.access_token)),
           )),
         );
     });
