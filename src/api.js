@@ -41,12 +41,16 @@ const purgeQueue = queueName => getQueueUrl(queueName).then(url => new Promise((
 
 const deleteMessages = (queueName, messages) => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
-  const entries = _.map(messages, message => ({ Id: message.MessageId, ReceiptHandle: message.ReceiptHandle }));
-  console.log(entries)
-  sqs.deleteMessageBatch({ QueueUrl: url, Entries: entries }, (err, data) => {
-    if (err) reject(err);
-    else resolve(data);
-  });
+  if (_.isEmpty(messages)) {
+    resolve('success');
+  } else {
+    const entries = _.map(messages, message => ({ Id: message.MessageId, ReceiptHandle: message.ReceiptHandle }));
+    console.log(entries);
+    sqs.deleteMessageBatch({ QueueUrl: url, Entries: entries }, (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  }
 }));
 
 const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {

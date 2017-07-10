@@ -112,33 +112,50 @@ module.exports.sync_events = (event) => {
       if (_.isEmpty(data.Messages)) {
         return Promise.reject('Outlook token is empty');
       }
-      return data;
+      return JSON.parse(data.Messages[0].Body);
     }),
     fetchMessage(googleQueueName).then((data) => {
       if (_.isEmpty(data.Messages)) {
         return Promise.reject('Google token is empty');
       }
-      return data;
+      return JSON.parse(data.Messages[0].Body);
     }),
-    fetchMessage(processedQueueName).then(message => _.map(message.Messages, ele => ele.Body)),
+    fetchMessage(processedQueueName),
   ]).then((data) => {
+    const outlookToken = data[0];
+    const googleToken = data[1];
+    const processedInfo = data[2];
+
     console.log('outlook token is');
-    console.log(data[0]);
+    console.log(outlookToken);
     console.log('google token is');
-    console.log(data[1]);
+    console.log(googleToken);
     console.log('processed event is');
-    console.log(data[2]);
-    const outlookToken = JSON.parse(data[0].Messages[0].Body);
-    const googleToken = JSON.parse(data[1].Messages[0].Body);
+    console.log(processedInfo);
+
+    let processedEvents = [];
+    if (!_.isEmpty(processedInfo.Messages)) {
+      processedEvents = JSON.parse(processedInfo.Messages[0].Body);
+    }
+
     return fetchOutlookEvents(outlookToken.token.access_token, syncDays)
     .then((outlookEvents) => {
-      const newEvents = _.filter(outlookEvents.value, message => !_.includes(data[1], message.id));
+      const newEvents = _.filter(
+        outlookEvents.value,
+        message => _.isUndefined(_.find(processedEvents, ele => ele.id === message.id)),
+      );
       console.log(`Unprocessed events ${newEvents}`);
-      return Promise.all(_.map(newEvents, (message) => {
-        createGoogleEvent(convertOutlookToGoogle(message), googleToken.token.access_token)
-          .then(() => sendMessage(processedQueueName, message.id));
-      }));
+      return sendMessage(processedQueueName, JSON.stringify(outlookEvents.value))
+        .then(() => deleteMessages(processedQueueName, processedInfo.Messages))
+        .then(() => Promise.all(
+          _.map(
+            newEvents,
+            message => createGoogleEvent(convertOutlookToGoogle(message), googleToken.token.access_token),
+          )),
+        );
     });
+  }).then(() => {
+    console.log('Success to sync events');
   }).catch((err) => {
     console.log(`Failed to sync events, error message is ${err}`);
   });
