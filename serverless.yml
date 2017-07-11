@@ -84,7 +84,7 @@ functions:
       processed_queue_name: ${self:custom.processed_queue_name}
       sync_days: ${self:custom.sync_days}
     events:
-      - schedule: rate(2 minutes)
+      - schedule: rate(60 minutes)
 resources:
   Resources:
     OutlookTokenQueue:

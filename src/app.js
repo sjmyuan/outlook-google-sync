@@ -152,7 +152,7 @@ module.exports.sync_events = (event) => {
     .then((outlookEvents) => {
       const newEvents = _.filter(
         outlookEvents.value,
-        message => _.isUndefined(_.find(processedEvents, ele => ele.id === message.id)
+        message => (_.isUndefined(_.find(processedEvents, ele => ele.id === message.id))
             && _.isUndefined(_.find(ignoreSubject, ele => ele === message.subject))),
       );
       console.log(`Unprocessed events ${newEvents}`);
