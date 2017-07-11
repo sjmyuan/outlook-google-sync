@@ -11,6 +11,8 @@ import { fetchMessage,
   convertOutlookToGoogle } from './api';
 import { googleAuth, outlookAuth } from './credential';
 
+import ignoreSubject from './ignore-subject';
+
 module.exports.outlook_login = (event, context, cb) => {
   const scope = _.get(event, 'stageVariables.outlook_scope');
   const redirectPath = _.get(event, 'stageVariables.redirect_path');
@@ -150,7 +152,8 @@ module.exports.sync_events = (event) => {
     .then((outlookEvents) => {
       const newEvents = _.filter(
         outlookEvents.value,
-        message => _.isUndefined(_.find(processedEvents, ele => ele.id === message.id)),
+        message => _.isUndefined(_.find(processedEvents, ele => ele.id === message.id)
+            && _.isUndefined(_.find(ignoreSubject, ele => ele === message.subject))),
       );
       console.log(`Unprocessed events ${newEvents}`);
       return sendMessage(processedQueueName, JSON.stringify(outlookEvents.value))

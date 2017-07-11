@@ -3,6 +3,8 @@ import _ from 'lodash';
 import rp from 'request-promise-native';
 import uuid from 'node-uuid';
 import rooms from './rooms.js';
+import moment from 'moment-timezone';
+import attendees from './attendees';
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
@@ -105,23 +107,27 @@ const fetchGoogleEvents = (token, days) => {
   return rp(option);
 };
 
-const convertOutlookToGoogle = (event, room) => ({
-  summary: event.subject,
-  location: room.title,
-  description: event.bodyPreview,
-  start: event.start,
-  end: event.end,
-  recurrence: [],
-  attendees: [{
-    email: room.id,
-  }],
-  reminders: {
-    useDefault: false,
-    overrides: [
+const convertOutlookToGoogle = (event, room) => {
+  const validAttendees = _.filter(
+    _.map(event.attendees, attendee => ({ email: attendees[attendee.emailAddress.address] })),
+    attendee => !_.isUndefined(attendee.email));
+  validAttendees.push({ email: room.id });
+  return {
+    summary: event.subject,
+    location: room.title,
+    description: event.bodyPreview,
+    start: event.start,
+    end: event.end,
+    recurrence: [],
+    attendees: validAttendees,
+    reminders: {
+      useDefault: false,
+      overrides: [
       { method: 'popup', minutes: 10 },
-    ],
-  },
-});
+      ],
+    },
+  };
+};
 
 const createGoogleEvent = (event, token) => {
   const uri = 'https://www.googleapis.com/calendar/v3/calendars/primary/events?sendNotifications=true';
@@ -138,6 +144,12 @@ const createGoogleEvent = (event, token) => {
   return rp(option);
 };
 
+const convertTime = (time, targetZone) => {
+  const srcTime = moment.tz(time.dateTime, time.timeZone);
+  const targetTime = srcTime.clone().tz(targetZone);
+  return targetTime.format();
+};
+
 const getAvailableRoom = (start, end, token) => {
   const uri = 'https://www.googleapis.com/calendar/v3/freeBusy';
   const option = {
@@ -148,8 +160,8 @@ const getAvailableRoom = (start, end, token) => {
     },
     json: true,
     body: {
-      timeMin: start,
-      timeMax: end,
+      timeMin: convertTime(start, 'Asia/Shanghai'),
+      timeMax: convertTime(end, 'Asia/Shanghai'),
       timeZone: 'Asia/Shanghai',
       items: rooms,
     },
