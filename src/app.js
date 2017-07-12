@@ -8,7 +8,10 @@ import { fetchMessage,
   fetchOutlookEvents,
   createGoogleEvent,
   getAvailableRoom,
-  convertOutlookToGoogle } from './api';
+  convertOutlookToGoogle,
+  readObjectFromS3,
+  writeObjectToS3,
+} from './api';
 import { googleAuth, outlookAuth } from './credential';
 
 import ignoreSubject from './ignore-subject';
@@ -170,5 +173,105 @@ module.exports.sync_events = (event) => {
     console.log('Success to sync events');
   }).catch((err) => {
     console.log(`Failed to sync events, error message is ${err}`);
+  });
+};
+
+module.exports.add_room = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const configPrefix = _.get(event, 'stageVariables.config_prefix');
+  const roomPrefix = `${configPrefix}/rooms.json`;
+  const newRooms = JSON.parse(event.body);
+  if (_.isNull(newRooms)) {
+    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
+    console.log('Request body is null');
+    return false;
+  }
+
+  console.log(`New rooms is ${newRooms}`);
+  readObjectFromS3(bucket, roomPrefix, []).then((oldRooms) => {
+    console.log(`Old rooms is ${oldRooms}`);
+    const allRooms = _.concat(oldRooms, newRooms);
+    console.log(`All rooms is ${allRooms}`);
+    return writeObjectToS3(bucket, roomPrefix, allRooms).then(() => {
+      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allRooms) });
+      console.log('Success to add room');
+    }).catch((err) => {
+      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
+      console.log(`Failed to add room, error message is ${err}`);
+    });
+  });
+};
+module.exports.add_attendee = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const configPrefix = _.get(event, 'stageVariables.config_prefix');
+  const attendeesPrefix = `${configPrefix}/attendees.json`;
+  const newAttendees = JSON.parse(event.body);
+  if (_.isNull(newAttendees)) {
+    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
+    console.log('Request body is null');
+    return false;
+  }
+  console.log(`New attendees is ${newAttendees}`);
+  readObjectFromS3(bucket, attendeesPrefix, []).then((oldAttendees) => {
+    console.log(`Old attendees is ${oldAttendees}`);
+    const allAttendees = _.concat(oldAttendees, newAttendees);
+    console.log(`All attendees is ${allAttendees}`);
+    return writeObjectToS3(bucket, attendeesPrefix, allAttendees).then(() => {
+      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allAttendees) });
+      console.log('Success to add attendee');
+    }).catch((err) => {
+      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
+      console.log(`Failed to add attendee, error message is ${err}`);
+    });
+  });
+};
+
+module.exports.add_user = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const configPrefix = _.get(event, 'stageVariables.config_prefix');
+  const userPrefix = `${configPrefix}/users.json`;
+  const newUsers = JSON.parse(event.body);
+  if (_.isNull(newUsers)) {
+    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
+    console.log('Request body is null');
+    return false;
+  }
+  console.log(`New users is ${newUsers}`);
+  readObjectFromS3(bucket, userPrefix, []).then((oldUsers) => {
+    console.log(`Old users is ${oldUsers}`);
+    const allUsers = _.concat(oldUsers, newUsers);
+    console.log(`All users is ${allUsers}`);
+    return writeObjectToS3(bucket, userPrefix, allUsers).then(() => {
+      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allUsers) });
+      console.log('Success to add user');
+    }).catch((err) => {
+      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
+      console.log(`Failed to add user, error message is ${err}`);
+    });
+  });
+};
+
+module.exports.add_filter = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const configPrefix = _.get(event, 'stageVariables.config_prefix');
+  const filterPrefix = `${configPrefix}/filters.json`;
+  const newFilters = JSON.parse(event.body);
+  if (_.isNull(newFilters)) {
+    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
+    console.log('Request body is null');
+    return false;
+  }
+  console.log(`New filters is ${newFilters}`);
+  readObjectFromS3(bucket, filterPrefix, []).then((oldFilters) => {
+    console.log(`Old filters is ${oldFilters}`);
+    const allFilters = _.concat(oldFilters, newFilters);
+    console.log(`All filters is ${allFilters}`);
+    return writeObjectToS3(bucket, filterPrefix, allFilters).then(() => {
+      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allFilters) });
+      console.log('Success to add filter');
+    }).catch((err) => {
+      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
+      console.log(`Failed to add filter, error message is ${err}`);
+    });
   });
 };

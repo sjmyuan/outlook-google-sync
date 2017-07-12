@@ -177,6 +177,27 @@ const getAvailableRoom = (start, end, token) => {
   });
 };
 
+const readObjectFromS3 = (bucket, key, defaultVal) => {
+  const s3 = new AWS.S3();
+  const getParams = {
+    Bucket: bucket,
+    Key: key,
+  };
+  return s3.getObject(getParams).promise()
+    .then(data => JSON.parse(data.Body))
+    .catch(() => Promise.resolve(defaultVal));
+};
+
+const writeObjectToS3 = (bucket, key, obj) => {
+  const s3 = new AWS.S3();
+  const putParams = {
+    Bucket: bucket,
+    Key: key,
+    Body: JSON.stringify(obj),
+  };
+  return s3.putObject(putParams).promise();
+};
+
 export { sendTopic,
   sendMessage,
   fetchMessage,
@@ -188,4 +209,6 @@ export { sendTopic,
   convertOutlookToGoogle,
   createGoogleEvent,
   getAvailableRoom,
+  readObjectFromS3,
+  writeObjectToS3,
 };

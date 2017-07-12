@@ -8,12 +8,19 @@ custom:
   google_queue_name: 'google_token_queue'
   processed_queue_name: 'processed_token_queue'
   sync_days: 7
+  home_bucket: 'outlook-google-sync'
+  token_prefix: 'token'
+  config_prefix: 'config'
+  cache_prefix: 'cache'
   stageVariables:
     redirect_path: ${self:custom.redirect_path}
     outlook_scope: ${self:custom.outlook_scope} 
     google_scope: ${self:custom.google_scope} 
     outlook_queue_name: ${self:custom.outlook_queue_name} 
     google_queue_name: ${self:custom.google_queue_name} 
+    home_bucket: ${self:custom.home_bucket}
+    token_prefix: ${self:custom.token_prefix}
+    config_prefix: ${self:custom.config_prefix}
 
 provider:
   name: aws
@@ -69,6 +76,42 @@ functions:
           method: get
           cors: true
           private: false
+  addRoom:
+    handler: app.add_room
+    timeout: 15
+    events:
+      - http:
+          path: add/room
+          method: post
+          cors: true
+          private: false
+  addAttendee:
+    handler: app.add_attendee
+    timeout: 15
+    events:
+      - http:
+          path: add/attendee
+          method: post
+          cors: true
+          private: false
+  addUser:
+    handler: app.add_user
+    timeout: 15
+    events:
+      - http:
+          path: add/user
+          method: post
+          cors: true
+          private: false
+  addFilter:
+    handler: app.add_filter
+    timeout: 15
+    events:
+      - http:
+          path: add/filter
+          method: post
+          cors: true
+          private: false
   refreshToken:
     handler: app.refresh_token 
     environment:
@@ -87,6 +130,10 @@ functions:
       - schedule: rate(60 minutes)
 resources:
   Resources:
+    HomeS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.home_bucket}
     OutlookTokenQueue:
       Type: "AWS::SQS::Queue"
       Properties:
