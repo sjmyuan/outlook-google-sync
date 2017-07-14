@@ -9,7 +9,6 @@ custom:
   processed_queue_name: 'processed_token_queue'
   sync_days: 7
   home_bucket: 'outlook-google-sync'
-  token_prefix: 'token'
   config_prefix: 'config'
   cache_prefix: 'cache'
   stageVariables:
@@ -19,7 +18,6 @@ custom:
     outlook_queue_name: ${self:custom.outlook_queue_name} 
     google_queue_name: ${self:custom.google_queue_name} 
     home_bucket: ${self:custom.home_bucket}
-    token_prefix: ${self:custom.token_prefix}
     config_prefix: ${self:custom.config_prefix}
 
 provider:
@@ -45,7 +43,7 @@ functions:
     timeout: 15
     events:
       - http:
-          path: outlook/login
+          path: outlook/login/{id}
           method: get
           cors: true
           private: false
@@ -54,7 +52,7 @@ functions:
     timeout: 15
     events:
       - http:
-          path: outlook/authorize
+          path: outlook/authorize/{id}
           method: get
           cors: true
           private: false
@@ -63,7 +61,7 @@ functions:
     timeout: 15
     events:
       - http:
-          path: google/login
+          path: google/login/{id}
           method: get
           cors: true
           private: false
@@ -72,17 +70,8 @@ functions:
     timeout: 15
     events:
       - http:
-          path: google/authorize
+          path: google/authorize/{id}
           method: get
-          cors: true
-          private: false
-  addRoom:
-    handler: app.add_room
-    timeout: 15
-    events:
-      - http:
-          path: add/room
-          method: post
           cors: true
           private: false
   addAttendee:
@@ -100,15 +89,6 @@ functions:
     events:
       - http:
           path: add/user
-          method: post
-          cors: true
-          private: false
-  addFilter:
-    handler: app.add_filter
-    timeout: 15
-    events:
-      - http:
-          path: add/filter
           method: post
           cors: true
           private: false

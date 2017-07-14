@@ -1,4 +1,7 @@
 import _ from 'lodash';
+
+const oauth = require('simple-oauth2');
+
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import { fetchMessage,
   sendMessage,
@@ -11,108 +14,147 @@ import { fetchMessage,
   convertOutlookToGoogle,
   readObjectFromS3,
   writeObjectToS3,
+  getUser,
+  updateUser,
+  listFoldersInS3,
 } from './api';
-import { googleAuth, outlookAuth } from './credential';
 
 import ignoreSubject from './ignore-subject';
 
-module.exports.outlook_login = (event, context, cb) => {
-  const scope = _.get(event, 'stageVariables.outlook_scope');
+module.exports.login = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const userPrefix = _.get(event, 'stageVariables.config_prefix');
+  const userName = _.get(event, 'pathParameters.id');
   const redirectPath = _.get(event, 'stageVariables.redirect_path');
   const stage = _.get(event, 'requestContext.stage');
-  const authUrl = getAuthUrl(outlookAuth, `https://${event.headers.Host}/${stage}/outlook/${redirectPath}`, scope.replace(/,/g, ' '));
-  cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${authUrl}">sign in</a> with your Office 365 or Outlook.com account.</p>` });
-  return true;
-};
+  const scope = process.env.scope;
+  const type = process.env.mail_type;
+  const clientPrefix = `${userPrefix}/${userName}/client/${type}`;
 
-module.exports.outlook_authorize = (event, context, cb) => {
-  const code = _.get(event, 'queryStringParameters.code');
-  const host = _.get(event, 'headers.Host');
-  const stage = _.get(event, 'requestContext.stage');
-  const redirectPath = _.get(event, 'stageVariables.redirect_path');
-  const scope = _.get(event, 'stageVariables.outlook_scope');
-  const queueName = _.get(event, 'stageVariables.outlook_queue_name');
-  const redirectUrl = `https://${host}/${stage}/outlook/${redirectPath}`;
-  console.log(`The code is ${code}`);
-  console.log(`The redirect url is ${redirectUrl}`);
-  console.log(`The scope url is ${scope}`);
-  getTokenFromCode(outlookAuth, code, redirectUrl, scope.replace(/,/g, ' '))
-    .then(token => purgeQueue(queueName).then(() => sendMessage(queueName, JSON.stringify(token)))).then((data) => {
-      cb(null, { statusCode: 200, headers: {}, body: 'Success to login' });
-    },
-  ).catch((err) => {
-    console.log(`Failed to authorize,error message is ${err}`);
-    cb(null, { statusCode: 500, headers: {}, body: 'Failed to authorize' });
-  });
-  return true;
-};
-
-module.exports.google_login = (event, context, cb) => {
-  const scope = _.get(event, 'stageVariables.google_scope');
-  const redirectPath = _.get(event, 'stageVariables.redirect_path');
-  const stage = _.get(event, 'requestContext.stage');
-  const authUrl = getAuthUrl(googleAuth, `https://${event.headers.Host}/${stage}/google/${redirectPath}`, scope.replace(/,/g, ' '));
-  cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${authUrl}">sign in</a> with your Gmail account.</p>` });
-  return true;
-};
-
-module.exports.google_authorize = (event, context, cb) => {
-  const code = _.get(event, 'queryStringParameters.code');
-  const host = _.get(event, 'headers.Host');
-  const stage = _.get(event, 'requestContext.stage');
-  const redirectPath = _.get(event, 'stageVariables.redirect_path');
-  const scope = _.get(event, 'stageVariables.google_scope');
-  const queueName = _.get(event, 'stageVariables.google_queue_name');
-  const redirectUrl = `https://${host}/${stage}/google/${redirectPath}`;
-  console.log(`The code is ${code}`);
-  console.log(`The redirect url is ${redirectUrl}`);
-  console.log(`The scope url is ${scope}`);
-  getTokenFromCode(googleAuth, code, redirectUrl, scope.replace(/,/g, ' '))
-    .then(token => purgeQueue(queueName).then(() => sendMessage(queueName, JSON.stringify(token)))).then((data) => {
-      cb(null, { statusCode: 200, headers: {}, body: 'Success to login' });
-    },
-  ).catch((err) => {
-    console.log(`Failed to authorize,error message is ${err}`);
-    cb(null, { statusCode: 500, headers: {}, body: 'Failed to authorize' });
-  });
-  return true;
-};
-module.exports.refresh_token = (event) => {
-  const outlookQueueName = process.env.outlook_queue_name;
-  const googleQueueName = process.env.google_queue_name;
-  Promise.all([
-    fetchMessage(outlookQueueName).then((message) => {
-      console.log('The outlook message is');
-      console.log(message);
-      if (_.isEmpty(message.Messages)) {
-        return Promise.reject('Outlook token is empty');
-      }
-      const token = JSON.parse(message.Messages[0].Body);
-      console.log('The outlook token is');
-      console.log(token);
-      return refreshAccessToken(outlookAuth, token.token.refresh_token)
-        .then(data => sendMessage(outlookQueueName, JSON.stringify(data)))
-        .then(() => deleteMessages(outlookQueueName, message.Messages));
-    }),
-    fetchMessage(googleQueueName).then((message) => {
-      console.log('The google message is');
-      console.log(message);
-      if (_.isEmpty(message.Messages)) {
-        return Promise.reject('Google token is empty');
-      }
-      const token = JSON.parse(message.Messages[0].Body);
-      console.log('The google token is');
-      console.log(token);
-      return refreshAccessToken(googleAuth, token.token.refresh_token)
-        .then(data => sendMessage(googleQueueName, JSON.stringify(data)))
-        .then(() => deleteMessages(googleQueueName, message.Messages));
-    }),
-  ]).then((data) => {
-    console.log('Success to refresh token');
+  readObjectFromS3(bucket, clientPrefix).then((client) => {
+    const authUrl = getAuthUrl(oauth.create(client),
+      `https://${event.headers.Host}/${stage}/${type}/${redirectPath}/${userName}`,
+      scope.replace(/,/g, ' '));
+    cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${authUrl}">sign in</a> with your ${type} account.</p>` });
   }).catch((err) => {
-    console.log(`Failed to refresh token,error is ${err}`);
+    cb(null, { statusCode: 500, headers: { 'Content-Type': 'text/html' }, body: JSON.stringify(err) });
   });
-  return true;
+};
+
+module.exports.authorize = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const userPrefix = _.get(event, 'stageVariables.user_prefix');
+  const userName = _.get(event, 'pathParameters.id');
+  const code = _.get(event, 'queryStringParameters.code');
+  const host = _.get(event, 'headers.Host');
+  const stage = _.get(event, 'requestContext.stage');
+  const redirectPath = _.get(event, 'stageVariables.redirect_path');
+  const type = process.env.mail_type;
+  const scope = process.env.scope;
+  const clientPrefix = `${userPrefix}/${userName}/client/${type}`;
+  const redirectUrl = `https://${host}/${stage}/${type}/${redirectPath}/${userName}`;
+  const tokenPrefix = `${userPrefix}/${userName}/token/${type}`;
+
+  console.log(`The code is ${code}`);
+  console.log(`The redirect url is ${redirectUrl}`);
+  console.log(`The scope is ${scope}`);
+
+  readObjectFromS3(bucket, clientPrefix).then(client => getTokenFromCode(
+      oauth.create(client),
+      code,
+      redirectUrl,
+      scope.replace(/,/g, ' '),
+    ).then(token => writeObjectToS3(bucket, tokenPrefix, token)).then(() => {
+      console.log(`Success to authorize ${type} , user is ${userName}`);
+      cb(null, { statusCode: 200, headers: {}, body: 'Success to login' });
+    }).catch((err) => {
+      console.log(`Failed to authorize,error message is ${err}`);
+      cb(null, { statusCode: 500, headers: {}, body: 'Failed to authorize' });
+    }));
+};
+
+module.exports.refresh_token = (event) => {
+  const bucket = process.env.home_bucket;
+  const userPrefix = process.env.user_prefix;
+  const type = process.env.mail_type;
+  listFoldersInS3(bucket, userPrefix)
+    .then(users => Promise.all(_.map(users, (user) => {
+      const clientPrefix = `${userPrefix}/${user}client/${type}`;
+      const tokenPrefix = `${userPrefix}/${user}token/${type}`;
+      return Promise.all([
+        readObjectFromS3(bucket, clientPrefix),
+        readObjectFromS3(bucket, tokenPrefix),
+      ]).then((data) => {
+        const client = data[0];
+        const token = data[1];
+        console.log('The token is');
+        console.log(token);
+        return refreshAccessToken(oauth.create(client), token.token.refresh_token)
+        .then(newToken => writeObjectToS3(bucket, tokenPrefix, newToken));
+      });
+    }))).then(() => {
+      console.log('Success to refresh token');
+    }).catch((err) => {
+      console.log(`Failed to refresh token,error is ${err}`);
+    });
+};
+
+module.exports.fetch_events = (event) => {
+  const bucket = process.env.home_bucket;
+  const processedEventsKey = process.env.processed_events_key;
+  const userPrefix = process.env.user_prefix;
+  const src_type = process.env.src_mail_type;
+  const tgt_type = process.env.tgt_mail_type;
+  const syncDays = process.env.sync_days;
+  const attendeesKey = process.env.attendees_key;
+
+  Promise.all([
+    listFoldersInS3(bucket, userPrefix),
+    readObjectFromS3(bucket, processedEventsKey),
+  ]).then((userAndEvent) => {
+    const [users, processedEvents] = userAndEvent;
+    return Promise.all(_.map(users, (user) => {
+      const srcTokenPrefix = `${userPrefix}/${user}token/${src_type}`;
+      const tgtTokenPrefix = `${userPrefix}/${user}token/${tgt_type}`;
+      const userInfoPrefix = `${userPrefix}/${user}info.json`;
+      return Promise.all([
+        readObjectFromS3(bucket, srcTokenPrefix),
+        readObjectFromS3(bucket, tgtTokenPrefix),
+        readObjectFromS3(bucket, userInfoPrefix),
+      ]).then((tokenAndInfo) => {
+        const [srcToken, tgtToken, userInfo] = tokenAndInfo;
+        return fetchOutlookEvents(srcToken.token.access_token, syncDays)
+            .then((events) => {
+              const newEvents = _.filter(
+                events.value,
+                message => (_.findIndex(processedEvents, ele => ele.iCalUId === message.iCalUId) < 0
+                  && _.findIndex(userInfo.filters, ele => ele === message.subject) < 0),
+              );
+              return _.map(newEvents, ele => ({
+                id: ele.iCalUId,
+                info: userInfo,
+                token: tgtToken,
+                event: ele,
+              }));
+            });
+      });
+    }));
+  }).then((events) => {
+    const totalEvents = _.uniqBy(_.flatten(events), ele => ele.id);
+    return writeObjectToS3(bucket, processedEventsKey, _.map(totalEvents, ele => ele.event))
+        .then(() => {
+          readObjectFromS3(bucket, attendeesKey).then(attendees => Promise.all(
+              _.map(
+                totalEvents,
+                message => getAvailableRoom(message.info.rooms, message.event.start, message.event.end, message.token.token.access_token)
+                  .then(room => createGoogleEvent(convertOutlookToGoogle(attendees, message.event, room), message.token.token.access_token)),
+              )));
+        });
+  }).then(() => {
+    console.log('Success to sync events');
+  }).catch((err) => {
+    console.log(`Failed to sync events, error message is ${err}`);
+  });
 };
 
 module.exports.sync_events = (event) => {
@@ -176,31 +218,6 @@ module.exports.sync_events = (event) => {
   });
 };
 
-module.exports.add_room = (event, context, cb) => {
-  const bucket = _.get(event, 'stageVariables.home_bucket');
-  const configPrefix = _.get(event, 'stageVariables.config_prefix');
-  const roomPrefix = `${configPrefix}/rooms.json`;
-  const newRooms = JSON.parse(event.body);
-  if (_.isNull(newRooms)) {
-    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
-    console.log('Request body is null');
-    return false;
-  }
-
-  console.log(`New rooms is ${newRooms}`);
-  readObjectFromS3(bucket, roomPrefix, []).then((oldRooms) => {
-    console.log(`Old rooms is ${oldRooms}`);
-    const allRooms = _.concat(oldRooms, newRooms);
-    console.log(`All rooms is ${allRooms}`);
-    return writeObjectToS3(bucket, roomPrefix, allRooms).then(() => {
-      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allRooms) });
-      console.log('Success to add room');
-    }).catch((err) => {
-      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
-      console.log(`Failed to add room, error message is ${err}`);
-    });
-  });
-};
 module.exports.add_attendee = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const configPrefix = _.get(event, 'stageVariables.config_prefix');
@@ -214,7 +231,12 @@ module.exports.add_attendee = (event, context, cb) => {
   console.log(`New attendees is ${newAttendees}`);
   readObjectFromS3(bucket, attendeesPrefix, []).then((oldAttendees) => {
     console.log(`Old attendees is ${oldAttendees}`);
-    const allAttendees = _.concat(oldAttendees, newAttendees);
+    const allAttendees = _.reduce(newAttendees, (collect, attendee) => {
+      if (_.findIndex(collect, ele => ele.outlook === attendee.oulook) < 0) {
+        return _.concat(collect, attendee);
+      }
+      return collect;
+    }, oldAttendees);
     console.log(`All attendees is ${allAttendees}`);
     return writeObjectToS3(bucket, attendeesPrefix, allAttendees).then(() => {
       cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allAttendees) });
@@ -227,6 +249,7 @@ module.exports.add_attendee = (event, context, cb) => {
 };
 
 module.exports.add_user = (event, context, cb) => {
+  console.log(event);
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const configPrefix = _.get(event, 'stageVariables.config_prefix');
   const userPrefix = `${configPrefix}/users.json`;
@@ -239,7 +262,12 @@ module.exports.add_user = (event, context, cb) => {
   console.log(`New users is ${newUsers}`);
   readObjectFromS3(bucket, userPrefix, []).then((oldUsers) => {
     console.log(`Old users is ${oldUsers}`);
-    const allUsers = _.concat(oldUsers, newUsers);
+    const allUsers = _.reduce(newUsers, (collect, user) => {
+      if (_.findIndex(collect, ele => ele.name === user.name) < 0) {
+        return _.concat(collect, user);
+      }
+      return collect;
+    }, oldUsers);
     console.log(`All users is ${allUsers}`);
     return writeObjectToS3(bucket, userPrefix, allUsers).then(() => {
       cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allUsers) });
@@ -247,31 +275,6 @@ module.exports.add_user = (event, context, cb) => {
     }).catch((err) => {
       cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
       console.log(`Failed to add user, error message is ${err}`);
-    });
-  });
-};
-
-module.exports.add_filter = (event, context, cb) => {
-  const bucket = _.get(event, 'stageVariables.home_bucket');
-  const configPrefix = _.get(event, 'stageVariables.config_prefix');
-  const filterPrefix = `${configPrefix}/filters.json`;
-  const newFilters = JSON.parse(event.body);
-  if (_.isNull(newFilters)) {
-    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
-    console.log('Request body is null');
-    return false;
-  }
-  console.log(`New filters is ${newFilters}`);
-  readObjectFromS3(bucket, filterPrefix, []).then((oldFilters) => {
-    console.log(`Old filters is ${oldFilters}`);
-    const allFilters = _.concat(oldFilters, newFilters);
-    console.log(`All filters is ${allFilters}`);
-    return writeObjectToS3(bucket, filterPrefix, allFilters).then(() => {
-      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(allFilters) });
-      console.log('Success to add filter');
-    }).catch((err) => {
-      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
-      console.log(`Failed to add filter, error message is ${err}`);
     });
   });
 };

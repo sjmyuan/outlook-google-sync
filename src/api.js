@@ -2,9 +2,7 @@ import AWS from 'aws-sdk';
 import _ from 'lodash';
 import rp from 'request-promise-native';
 import uuid from 'node-uuid';
-import rooms from './rooms.js';
 import moment from 'moment-timezone';
-import attendees from './attendees';
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
@@ -107,7 +105,7 @@ const fetchGoogleEvents = (token, days) => {
   return rp(option);
 };
 
-const convertOutlookToGoogle = (event, room) => {
+const convertOutlookToGoogle = (attendees, event, room) => {
   const validAttendees = _.filter(
     _.map(event.attendees, attendee => ({ email: attendees[attendee.emailAddress.address] })),
     attendee => !_.isUndefined(attendee.email));
@@ -150,7 +148,7 @@ const convertTime = (time, targetZone) => {
   return targetTime.format();
 };
 
-const getAvailableRoom = (start, end, token) => {
+const getAvailableRoom = (rooms, start, end, token) => {
   const uri = 'https://www.googleapis.com/calendar/v3/freeBusy';
   const option = {
     method: 'POST',
@@ -177,15 +175,14 @@ const getAvailableRoom = (start, end, token) => {
   });
 };
 
-const readObjectFromS3 = (bucket, key, defaultVal) => {
+const readObjectFromS3 = (bucket, key) => {
   const s3 = new AWS.S3();
   const getParams = {
     Bucket: bucket,
     Key: key,
   };
   return s3.getObject(getParams).promise()
-    .then(data => JSON.parse(data.Body))
-    .catch(() => Promise.resolve(defaultVal));
+    .then(data => JSON.parse(data.Body));
 };
 
 const writeObjectToS3 = (bucket, key, obj) => {
@@ -197,6 +194,17 @@ const writeObjectToS3 = (bucket, key, obj) => {
   };
   return s3.putObject(putParams).promise();
 };
+
+const listFoldersInS3 = (bucket, prefix) => {
+  const s3 = new AWS.S3();
+  const params = {
+    Bucket: bucket,
+    Delimiter: '/',
+    Prefix: prefix,
+  };
+  return s3.listObjects(params).promise().then(data => data.CommonPrefixes);
+};
+
 
 export { sendTopic,
   sendMessage,
@@ -211,4 +219,5 @@ export { sendTopic,
   getAvailableRoom,
   readObjectFromS3,
   writeObjectToS3,
+  listFoldersInS3,
 };
