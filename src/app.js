@@ -4,8 +4,6 @@ const oauth = require('simple-oauth2');
 
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import {
-  readObjectFromS3,
-  writeObjectToS3,
   addUser,
   addAttendees,
   syncEvents,
@@ -19,14 +17,13 @@ import ignoreSubject from './ignore-subject';
 module.exports.login = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const userName = _.get(event, 'pathParameters.id');
-  const redirectPath = _.get(event, 'stageVariables.redirect_path');
   const stage = _.get(event, 'requestContext.stage');
   const scope = process.env.scope;
-  const type = process.env.mail_type;
+  const redirectPath = process.env.redirect_path
   const clientKeyTpl = process.env.client_key;
-  const redirectUrl = `https://${event.headers.Host}/${stage}/${type}/${redirectPath}/${userName}`;
+  const redirectUrl = `https://${event.headers.Host}/${stage}/${redirectPath}/${userName}`;
   getLoginUrl(userName, bucket, clientKeyTpl, redirectUrl, scope).then((url) => {
-    cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${url}">sign in</a> with your ${type} account.</p>` });
+    cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${url}">sign in</a> your account.</p>` });
   }).catch(() => {
     cb(null, { statusCode: 500, headers: { 'Content-Type': 'text/html' }, body: JSON.stringify(err) });
   });
@@ -38,12 +35,11 @@ module.exports.authorize = (event, context, cb) => {
   const code = _.get(event, 'queryStringParameters.code');
   const host = _.get(event, 'headers.Host');
   const stage = _.get(event, 'requestContext.stage');
-  const redirectPath = _.get(event, 'stageVariables.redirect_path');
+  const redirectPath = process.env.redirect_path
   const clientKeyTpl = process.env.client_key;
   const tokenKeyTpl = process.env.token_key;
   const scope = process.env.scope;
-  const type = process.env.mail_type;
-  const redirectUrl = `https://${host}/${stage}/${type}/${redirectPath}/${userName}`;
+  const redirectUrl = `https://${host}/${stage}/${redirectPath}/${userName}`;
 
   console.log(`The code is ${code}`);
   console.log(`The redirect url is ${redirectUrl}`);
