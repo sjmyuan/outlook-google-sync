@@ -4,6 +4,10 @@ import rp from 'request-promise-native';
 import uuid from 'node-uuid';
 import moment from 'moment-timezone';
 
+const oauth = require('simple-oauth2');
+
+import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
+
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
   sqs.getQueueUrl({ QueueName: queueName }, (err, data) => {
@@ -106,9 +110,13 @@ const fetchGoogleEvents = (token, days) => {
 };
 
 const convertOutlookToGoogle = (attendees, event, room) => {
-  const validAttendees = _.filter(
-    _.map(event.attendees, attendee => ({ email: attendees[attendee.emailAddress.address] })),
-    attendee => !_.isUndefined(attendee.email));
+  const validAttendees = _.reduce(event.attendees, (collect, attendee) => {
+    const info = _.find(attendees, ele => ele.outlook === attendee.emailAddress.address);
+    if (_.isUndefined(info)) {
+      return collect;
+    }
+    return [...collect, { email: info.google }];
+  }, []);
   validAttendees.push({ email: room.id });
   return {
     summary: event.subject,
@@ -205,6 +213,145 @@ const listFoldersInS3 = (bucket, prefix) => {
   return s3.listObjects(params).promise().then(data => data.CommonPrefixes);
 };
 
+const fillInUser = (tpl, user) => tpl.replace(/%USER%/g, user);
+
+const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl) => {
+  const userInfoKey = fillInUser(userInfoKeyTpl, newUser);
+  const googleClientKey = fillInUser(googleClientKeyTpl, newUser);
+  const outlookClientKey = fillInUser(outlookClientKeyTpl, newUser);
+  const outlookClient = {
+    client: newUser.outlook,
+    auth: {
+      tokenHost: 'https://login.microsoftonline.com',
+      authorizePath: 'common/oauth2/v2.0/authorize',
+      tokenPath: 'common/oauth2/v2.0/token',
+    },
+  };
+  const googleClient = {
+    client: newUser.google,
+    auth: {
+      tokenHost: 'https://accounts.google.com',
+      authorizePath: 'o/oauth2/auth',
+      tokenPath: 'o/oauth2/token',
+    },
+  };
+  return Promise.all([
+    writeObjectToS3(bucket, userInfoKey, newUser),
+    writeObjectToS3(bucket, googleClientKey, googleClient),
+    writeObjectToS3(bucket, outlookClientKey, outlookClient),
+  ]);
+};
+
+const addAttendees = (newAttendees, bucket, attendeesKey) => readObjectFromS3(bucket, attendeesKey).then((oldAttendees) => {
+  console.log(`Old attendees is ${oldAttendees}`);
+  const allAttendees = _.uniqBy([...oldAttendees, ...newAttendees], ele => ele.outlook);
+  console.log(`All attendees is ${allAttendees}`);
+  return writeObjectToS3(bucket, attendeesKey, allAttendees);
+});
+
+
+const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKeyTpl, users, processedEvents, syncDays) => Promise.all(_.map(users, (user) => {
+  const srcTokenKey = fillInUser(srcTokenKeyTpl, user);
+  const tgtTokenKey = fillInUser(tgtTokenKeyTpl, user);
+  const userInfoKey = fillInUser(userInfoKeyTpl, user);
+  return Promise.all([
+    readObjectFromS3(bucket, srcTokenKey),
+    readObjectFromS3(bucket, tgtTokenKey),
+    readObjectFromS3(bucket, userInfoKey),
+  ]).then((tokenAndInfo) => {
+    const [srcToken, tgtToken, userInfo] = tokenAndInfo;
+    return fetchOutlookEvents(srcToken.token.access_token, syncDays)
+            .then((events) => {
+              const newEvents = _.filter(
+                events.value,
+                message => (_.findIndex(processedEvents, ele => ele.iCalUId === message.iCalUId) < 0
+                  && _.findIndex(userInfo.filters, ele => ele === message.subject) < 0),
+              );
+              return _.map(newEvents, ele => ({
+                id: ele.iCalUId,
+                info: userInfo,
+                token: tgtToken,
+                event: ele,
+              }));
+            });
+  });
+})).then(events => _.uniqBy(_.flatten(events), ele => ele.id));
+
+const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey) =>
+  writeObjectToS3(bucket, processedEventsKey, _.map(totalEvents, ele => ele.event))
+    .then(() => {
+      readObjectFromS3(bucket, attendeesKey).then(attendees => Promise.all(
+        _.map(
+          totalEvents,
+          message => getAvailableRoom(message.info.rooms,
+            message.event.start,
+            message.event.end,
+            message.token.token.access_token,
+          ).then(room =>
+              createGoogleEvent(
+                convertOutlookToGoogle(attendees, message.event, room),
+                message.token.token.access_token,
+              )),
+        )));
+    });
+
+const syncEvents = (bucket,
+  processedEventsKey,
+  userHomeKey,
+  userInfoKeyTpl,
+  srcTokenKeyTpl,
+  tgtTokenKeyTpl,
+  syncDays,
+  attendeesKey) => Promise.all([
+    listFoldersInS3(bucket, userHomeKey),
+    readObjectFromS3(bucket, processedEventsKey),
+  ]).then((userAndEvent) => {
+    const [users, processedEvents] = userAndEvent;
+    return fetchAllValidEvents(
+      bucket,
+      srcTokenKeyTpl,
+      tgtTokenKeyTpl,
+      userInfoKeyTpl,
+      users,
+      processedEvents,
+      syncDays);
+  }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKey));
+
+const refreshTokens = (bucket, userHomeKey, clientKeyTpl, tokenKeyTpl) => listFoldersInS3(bucket, userHomeKey)
+    .then(users => Promise.all(_.map(users, (user) => {
+      const clientKey = fillInUser(clientKeyTpl, user);
+      const tokenKey = fillInUser(tokenKeyTpl, user);
+      return Promise.all([
+        readObjectFromS3(bucket, clientKey),
+        readObjectFromS3(bucket, tokenKey),
+      ]).then((data) => {
+        const [client, token] = data;
+        console.log('The client is');
+        console.log(client);
+        console.log('The token is');
+        console.log(token);
+        return refreshAccessToken(oauth.create(client), token.token.refresh_token)
+        .then(newToken => writeObjectToS3(bucket, tokenKey, newToken));
+      });
+    })));
+
+const authorize = (user, bucket, clientKeyTpl, tokenKeyTpl, code, redirectUrl, scope) => {
+  const clientKey = fillInUser(clientKeyTpl, user);
+  const tokenKey = fillInUser(tokenKeyTpl, user);
+  return readObjectFromS3(bucket, clientKey).then(client => getTokenFromCode(
+      oauth.create(client),
+      code,
+      redirectUrl,
+      scope.replace(/,/g, ' '),
+    ).then(token => writeObjectToS3(bucket, tokenKey, token)));
+};
+
+const getLoginUrl = (user, bucket, clientKeyTpl, redirectUrl, scope) => {
+  const clientKey = fillInUser(clientKeyTpl, user);
+  return readObjectFromS3(bucket, clientKey).then(client => getAuthUrl(oauth.create(client),
+      redirectUrl,
+      scope.replace(/,/g, ' ')));
+};
 
 export { sendTopic,
   sendMessage,
@@ -220,4 +367,10 @@ export { sendTopic,
   readObjectFromS3,
   writeObjectToS3,
   listFoldersInS3,
+  addUser,
+  addAttendees,
+  syncEvents,
+  refreshTokens,
+  authorize,
+  getLoginUrl,
 };
