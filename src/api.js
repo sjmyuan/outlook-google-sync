@@ -210,7 +210,7 @@ const listFoldersInS3 = (bucket, prefix) => {
     Delimiter: '/',
     Prefix: prefix,
   };
-  return s3.listObjects(params).promise().then(data => data.CommonPrefixes);
+  return s3.listObjects(params).promise().then(data => _.map(data.CommonPrefixes, ele => ele.replace(/\//g, '')));
 };
 
 const fillInUser = (tpl, user) => tpl.replace(/%USER%/g, user);
@@ -250,17 +250,18 @@ const addAttendees = (newAttendees, bucket, attendeesKey) => readObjectFromS3(bu
 });
 
 
-const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKeyTpl, users, processedEvents, syncDays) => Promise.all(_.map(users, (user) => {
-  const srcTokenKey = fillInUser(srcTokenKeyTpl, user);
-  const tgtTokenKey = fillInUser(tgtTokenKeyTpl, user);
-  const userInfoKey = fillInUser(userInfoKeyTpl, user);
-  return Promise.all([
-    readObjectFromS3(bucket, srcTokenKey),
-    readObjectFromS3(bucket, tgtTokenKey),
-    readObjectFromS3(bucket, userInfoKey),
-  ]).then((tokenAndInfo) => {
-    const [srcToken, tgtToken, userInfo] = tokenAndInfo;
-    return fetchOutlookEvents(srcToken.token.access_token, syncDays)
+const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKeyTpl, users, processedEvents, syncDays) =>
+  Promise.all(_.map(users, (user) => {
+    const srcTokenKey = fillInUser(srcTokenKeyTpl, user);
+    const tgtTokenKey = fillInUser(tgtTokenKeyTpl, user);
+    const userInfoKey = fillInUser(userInfoKeyTpl, user);
+    return Promise.all([
+      readObjectFromS3(bucket, srcTokenKey),
+      readObjectFromS3(bucket, tgtTokenKey),
+      readObjectFromS3(bucket, userInfoKey),
+    ]).then((tokenAndInfo) => {
+      const [srcToken, tgtToken, userInfo] = tokenAndInfo;
+      return fetchOutlookEvents(srcToken.token.access_token, syncDays)
             .then((events) => {
               const newEvents = _.filter(
                 events.value,
@@ -274,8 +275,8 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
                 event: ele,
               }));
             });
-  });
-})).then(events => _.uniqBy(_.flatten(events), ele => ele.id));
+    });
+  })).then(events => _.uniqBy(_.flatten(events), ele => ele.id));
 
 const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey) =>
   writeObjectToS3(bucket, processedEventsKey, _.map(totalEvents, ele => ele.event))
@@ -373,4 +374,5 @@ export { sendTopic,
   refreshTokens,
   authorize,
   getLoginUrl,
+  fillInUser,
 };
