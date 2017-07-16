@@ -82,4 +82,39 @@ describe('api', () => {
       return expect(result).eventually.to.deep.equal(['user1', 'user2']);
     });
   });
+
+  describe('addAttendees', () => {
+    let getObjectReuslt = null;
+    let putObjectResult = null;
+    const getObject = sinon.stub().returns(
+      {
+        promise: () => getObjectReuslt,
+      },
+    );
+    const putObject = sinon.stub().returns(
+      {
+        promise: () => putObjectResult,
+      },
+    );
+    beforeEach(() => {
+      sinon.stub(AWS, 'S3').returns(
+        {
+          getObject,
+          putObject,
+        },
+      );
+    });
+    afterEach(() => {
+      AWS.S3.restore();
+    });
+    describe('No attendees file in s3', () => {
+      it('should return the empty array', () => {
+        const newAttendees = require('./fixtures/attendees.json');
+        getObjectReuslt = Promise.reject('no file');
+        putObjectResult = Promise.resolve('success');
+        const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
+        expect(result).eventually.to.equal('success');
+      });
+    });
+  });
 });
