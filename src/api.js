@@ -242,12 +242,15 @@ const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookCli
   ]);
 };
 
-const addAttendees = (newAttendees, bucket, attendeesKey) => readObjectFromS3(bucket, attendeesKey).then((oldAttendees) => {
-  console.log(`Old attendees is ${oldAttendees}`);
-  const allAttendees = _.uniqBy([...oldAttendees, ...newAttendees], ele => ele.outlook);
-  console.log(`All attendees is ${allAttendees}`);
-  return writeObjectToS3(bucket, attendeesKey, allAttendees);
-});
+const addAttendees = (newAttendees, bucket, attendeesKey) =>
+  readObjectFromS3(bucket, attendeesKey)
+  .catch(() => Promise.resolve([]))
+  .then((oldAttendees) => {
+    console.log(`Old attendees is ${oldAttendees}`);
+    const allAttendees = _.uniqBy([...oldAttendees, ...newAttendees], ele => ele.outlook);
+    console.log(`All attendees is ${allAttendees}`);
+    return writeObjectToS3(bucket, attendeesKey, allAttendees);
+  });
 
 
 const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKeyTpl, users, processedEvents, syncDays) =>

@@ -1,0 +1,11 @@
+{
+  "client": {
+    "id": "test id",
+    "secret": "test secret"
+  },
+  "auth": {
+    "tokenHost": "https://accounts.google.com",
+    "authorizePath": "o/oauth2/auth",
+    "tokenPath": "o/oauth2/token"
+  }
+}

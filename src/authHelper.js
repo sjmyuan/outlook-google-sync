@@ -11,7 +11,7 @@ const getAuthUrl = (oauth2, redirect_uri, scope) => {
   return returnVal;
 };
 
-const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope, callback) => new Promise((resolve, reject) => {
+const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope) => new Promise((resolve, reject) => {
   oauth2.authorizationCode.getToken({
     code: auth_code,
     redirect_uri,
