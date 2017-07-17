@@ -216,9 +216,9 @@ const listFoldersInS3 = (bucket, prefix) => {
 const fillInUser = (tpl, user) => tpl.replace(/%USER%/g, user);
 
 const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl) => {
-  const userInfoKey = fillInUser(userInfoKeyTpl, newUser);
-  const googleClientKey = fillInUser(googleClientKeyTpl, newUser);
-  const outlookClientKey = fillInUser(outlookClientKeyTpl, newUser);
+  const userInfoKey = fillInUser(userInfoKeyTpl, newUser.name);
+  const googleClientKey = fillInUser(googleClientKeyTpl, newUser.name);
+  const outlookClientKey = fillInUser(outlookClientKeyTpl, newUser.name);
   const outlookClient = {
     client: newUser.outlook,
     auth: {
@@ -246,9 +246,11 @@ const addAttendees = (newAttendees, bucket, attendeesKey) =>
   readObjectFromS3(bucket, attendeesKey)
   .catch(() => Promise.resolve([]))
   .then((oldAttendees) => {
-    console.log(`Old attendees is ${oldAttendees}`);
+    console.log('Old attendees is ');
+    console.log(oldAttendees);
     const allAttendees = _.uniqBy([...oldAttendees, ...newAttendees], ele => ele.outlook);
-    console.log(`All attendees is ${allAttendees}`);
+    console.log('All attendees is ');
+    console.log(allAttendees);
     return writeObjectToS3(bucket, attendeesKey, allAttendees);
   });
 

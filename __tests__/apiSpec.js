@@ -113,8 +113,62 @@ describe('api', () => {
         getObjectReuslt = Promise.reject('no file');
         putObjectResult = Promise.resolve('success');
         const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
-        expect(result).eventually.to.equal('success');
+        return expect(result).eventually.to.equal('success');
       });
+    });
+    describe('All duplicated attendees in s3', () => {
+      it('should return the same attendees', () => {
+        const newAttendees = require('./fixtures/attendees.json');
+        getObjectReuslt = Promise.resolve({ Body: JSON.stringify(newAttendees) });
+        putObjectResult = Promise.resolve('success');
+        const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
+        return expect(result).eventually.to.equal('success');
+      });
+    });
+    describe('Partial duplicated attendees in s3', () => {
+      it('should return the merged attendees', () => {
+        const newAttendees = require('./fixtures/attendees.json');
+        const oldAttendees = [{ outlook: 'outlook', google: 'google' }];
+        getObjectReuslt = Promise.resolve({ Body: JSON.stringify(oldAttendees) });
+        putObjectResult = Promise.resolve('success');
+        const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
+        return expect(result).eventually.to.equal('success');
+      });
+    });
+  });
+
+  describe('addUser', () => {
+    const putObject = sinon.stub().returns({
+      promise: () => Promise.resolve('success'),
+    });
+    beforeEach(() => {
+      sinon.stub(AWS, 'S3').returns(
+        {
+          putObject,
+        },
+      );
+    });
+    afterEach(() => {
+      AWS.S3.restore();
+    });
+    it('should create the user structure', () => {
+      const newUser = require('./fixtures/user-info.json');
+
+      const result = api.addUser(newUser, 'bucket', 'config/%USER%/info.json', 'config/%USER%/client/google.json', 'config/%USER%/client/outlook.json');
+
+      putObject.should.have.been.calledWith({ Bucket: 'bucket', Key: 'config/sync/info.json', Body: JSON.stringify(newUser) });
+      putObject.should.have.been.calledWith({
+        Body: '{"client":{"id":"3333333333","secret":"444444444"},"auth":{"tokenHost":"https://accounts.google.com","authorizePath":"o/oauth2/auth","tokenPath":"o/oauth2/token"}}',
+        Bucket: 'bucket',
+        Key: 'config/sync/client/google.json',
+      });
+      putObject.should.have.been.calledWith({
+        Body: '{"client":{"id":"1111111111111111","secret":"222222222222"},"auth":{"tokenHost":"https://login.microsoftonline.com","authorizePath":"common/oauth2/v2.0/authorize","tokenPath":"common/oauth2/v2.0/token"}}',
+        Bucket: 'bucket',
+        Key: 'config/sync/client/outlook.json',
+      });
+
+      expect(result).eventually.to.deep.equal(['success', 'success', 'success']);
     });
   });
 });
