@@ -7,7 +7,7 @@ import {
   addUser,
   addAttendees,
   syncEvents,
-  refresTokens,
+  refreshTokens,
   authorize,
   getLoginUrl,
 } from './api';
@@ -19,7 +19,7 @@ module.exports.login = (event, context, cb) => {
   const userName = _.get(event, 'pathParameters.id');
   const stage = _.get(event, 'requestContext.stage');
   const scope = process.env.scope;
-  const redirectPath = process.env.redirect_path
+  const redirectPath = process.env.redirect_path;
   const clientKeyTpl = process.env.client_key;
   const redirectUrl = `https://${event.headers.Host}/${stage}/${redirectPath}/${userName}`;
   getLoginUrl(userName, bucket, clientKeyTpl, redirectUrl, scope).then((url) => {
@@ -35,7 +35,7 @@ module.exports.authorize = (event, context, cb) => {
   const code = _.get(event, 'queryStringParameters.code');
   const host = _.get(event, 'headers.Host');
   const stage = _.get(event, 'requestContext.stage');
-  const redirectPath = process.env.redirect_path
+  const redirectPath = process.env.redirect_path;
   const clientKeyTpl = process.env.client_key;
   const tokenKeyTpl = process.env.token_key;
   const scope = process.env.scope;
@@ -46,7 +46,7 @@ module.exports.authorize = (event, context, cb) => {
   console.log(`The scope is ${scope}`);
 
   authorize(userName, bucket, clientKeyTpl, tokenKeyTpl, code, redirectUrl, scope).then(() => {
-    console.log(`Success to authorize ${type} , user is ${userName}`);
+    console.log(`Success to authorize, user is ${userName}`);
     cb(null, { statusCode: 200, headers: {}, body: 'Success to login' });
   }).catch((err) => {
     console.log(`Failed to authorize,error message is ${err}`);
@@ -59,7 +59,7 @@ module.exports.refresh_token = (event) => {
   const userHomeKey = process.env.user_home_key;
   const clientKeyTpl = process.env.client_key;
   const tokenKeyTpl = process.env.token_key;
-  refresTokens(bucket, userHomeKey, clientKeyTpl, tokenKeyTpl).then(() => {
+  refreshTokens(bucket, userHomeKey, clientKeyTpl, tokenKeyTpl).then(() => {
     console.log('Success to refresh token');
   }).catch((err) => {
     console.log(`Failed to refresh token,error is ${err}`);
@@ -126,7 +126,7 @@ module.exports.add_user = (event, context, cb) => {
   const outlookClientKeyTpl = _.get(event, 'stageVariables.outlook_client_key');
   addUser(newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl)
     .then(() => {
-      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add user' });
+      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Success to add user' });
       console.log('Success to add user');
     })
     .catch((err) => {

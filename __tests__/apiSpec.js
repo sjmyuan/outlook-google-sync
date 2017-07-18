@@ -6,7 +6,7 @@ import * as api from '../src/api';
 describe('api', () => {
   describe('fillInUser', () => {
     it('should return the key with actual user', () => {
-      expect(api.fillInUser('config/%USER%/info.json', 'serverless')).to.equal('config/serverless/info.json');
+      expect(api.fillInUser('config/=USER=/info.json', 'serverless')).to.equal('config/serverless/info.json');
     });
   });
   describe('readObjectFromS3', () => {
@@ -76,7 +76,7 @@ describe('api', () => {
       AWS.S3.restore();
     });
     it('should return success', () => {
-      data = ['user1/', 'user2/'];
+      data = [{Prefix:'config/users/user1/'}, {Prefix:'config/users/user2/'}];
       const result = api.listFoldersInS3('bucket', 'config/users/');
       listObjects.should.have.been.calledWith({ Bucket: 'bucket', Delimiter: '/', Prefix: 'config/users/' });
       return expect(result).eventually.to.deep.equal(['user1', 'user2']);
@@ -154,7 +154,7 @@ describe('api', () => {
     it('should create the user structure', () => {
       const newUser = require('./fixtures/user-info.json');
 
-      const result = api.addUser(newUser, 'bucket', 'config/%USER%/info.json', 'config/%USER%/client/google.json', 'config/%USER%/client/outlook.json');
+      const result = api.addUser(newUser, 'bucket', 'config/=USER=/info.json', 'config/=USER=/client/google.json', 'config/=USER=/client/outlook.json');
 
       putObject.should.have.been.calledWith({ Bucket: 'bucket', Key: 'config/sync/info.json', Body: JSON.stringify(newUser) });
       putObject.should.have.been.calledWith({

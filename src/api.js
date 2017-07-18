@@ -210,10 +210,10 @@ const listFoldersInS3 = (bucket, prefix) => {
     Delimiter: '/',
     Prefix: prefix,
   };
-  return s3.listObjects(params).promise().then(data => _.map(data.CommonPrefixes, ele => ele.replace(/\//g, '')));
+  return s3.listObjects(params).promise().then(data => _.map(data.CommonPrefixes, ele => ele.Prefix.replace(prefix, '').replace(/\/$/g, '')));
 };
 
-const fillInUser = (tpl, user) => tpl.replace(/%USER%/g, user);
+const fillInUser = (tpl, user) => tpl.replace(/=USER=/g, user);
 
 const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl) => {
   const userInfoKey = fillInUser(userInfoKeyTpl, newUser.name);
@@ -273,22 +273,29 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
                 message => (_.findIndex(processedEvents, ele => ele.iCalUId === message.iCalUId) < 0
                   && _.findIndex(userInfo.filters, ele => ele === message.subject) < 0),
               );
-              return _.map(newEvents, ele => ({
-                id: ele.iCalUId,
-                info: userInfo,
-                token: tgtToken,
-                event: ele,
-              }));
+              return {
+                validEvents: _.map(newEvents, ele => ({
+                  id: ele.iCalUId,
+                  info: userInfo,
+                  token: tgtToken,
+                  event: ele,
+                })),
+                allEvents: events.value,
+              };
             });
     });
-  })).then(events => _.uniqBy(_.flatten(events), ele => ele.id));
+  })).then(events => ({
+    validEvents: _.uniqBy(_.flatMap(events, ele => ele.validEvents), ele => ele.id),
+    allEvents: _.uniqBy(_.flatMap(events, ele => ele.allEvents), ele => ele.iCalUId),
+  }));
 
 const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey) =>
-  writeObjectToS3(bucket, processedEventsKey, _.map(totalEvents, ele => ele.event))
-    .then(() => {
-      readObjectFromS3(bucket, attendeesKey).then(attendees => Promise.all(
+  writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
+    .then(() => readObjectFromS3(bucket, attendeesKey)
+        .catch(() => Promise.resolve([]))
+        .then(attendees => Promise.all(
         _.map(
-          totalEvents,
+          totalEvents.validEvents,
           message => getAvailableRoom(message.info.rooms,
             message.event.start,
             message.event.end,
@@ -298,8 +305,7 @@ const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendee
                 convertOutlookToGoogle(attendees, message.event, room),
                 message.token.token.access_token,
               )),
-        )));
-    });
+        ))));
 
 const syncEvents = (bucket,
   processedEventsKey,
@@ -310,7 +316,7 @@ const syncEvents = (bucket,
   syncDays,
   attendeesKey) => Promise.all([
     listFoldersInS3(bucket, userHomeKey),
-    readObjectFromS3(bucket, processedEventsKey),
+    readObjectFromS3(bucket, processedEventsKey).catch(() => Promise.resolve([])),
   ]).then((userAndEvent) => {
     const [users, processedEvents] = userAndEvent;
     return fetchAllValidEvents(
@@ -327,6 +333,9 @@ const refreshTokens = (bucket, userHomeKey, clientKeyTpl, tokenKeyTpl) => listFo
     .then(users => Promise.all(_.map(users, (user) => {
       const clientKey = fillInUser(clientKeyTpl, user);
       const tokenKey = fillInUser(tokenKeyTpl, user);
+      console.log(`user is ${user}`);
+      console.log(`client key is ${clientKey}`);
+      console.log(`token key is ${tokenKey}`);
       return Promise.all([
         readObjectFromS3(bucket, clientKey),
         readObjectFromS3(bucket, tokenKey),

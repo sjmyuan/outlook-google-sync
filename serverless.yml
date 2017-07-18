@@ -5,16 +5,16 @@ custom:
   google_redirect_path: 'google/authorize'
   outlook_scope: 'openid,offline_access,Calendars.Read'
   google_scope: 'https://www.googleapis.com/auth/calendar'
-  outlook_client_key: 'config/users/%USER%/client/outlook.json'
-  outlook_token_key: 'config/users/%USER%/token/outlook.json'
-  google_client_key: 'config/users/%USER%/client/google.json'
-  google_token_key: 'config/users/%USER%/token/google.json'
-  user_info_key: 'config/users/%USER%/info.json'
+  outlook_client_key: 'config/users/=USER=/client/outlook.json'
+  outlook_token_key: 'config/users/=USER=/token/outlook.json'
+  google_client_key: 'config/users/=USER=/client/google.json'
+  google_token_key: 'config/users/=USER=/token/google.json'
+  user_info_key: 'config/users/=USER=/info.json'
   attendees_key: 'config/attendees.json'
   processed_events_key: 'cache/events.json'
   user_home_key: 'config/users/'
   sync_days: 7
-  home_bucket: 'outlook-google-sync'
+  home_bucket: 'outlook-google-sync-stg'
   stageVariables:
     home_bucket: ${self:custom.home_bucket}
     attendees_key: ${self:custom.attendees_key}
@@ -81,7 +81,7 @@ functions:
           cors: true
           private: false
   googleAuthorize:
-    handler: app.google_authorize
+    handler: app.authorize
     timeout: 15
     environment:
       redirect_path: ${self:custom.google_redirect_path}
