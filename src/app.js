@@ -12,8 +12,6 @@ import {
   getLoginUrl,
 } from './api';
 
-import ignoreSubject from './ignore-subject';
-
 module.exports.login = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const userName = _.get(event, 'queryStringParameters.id');
@@ -23,7 +21,7 @@ module.exports.login = (event, context, cb) => {
   const clientKeyTpl = process.env.client_key;
   const redirectUrl = `https://${event.headers.Host}/${stage}/${redirectPath}`;
   getLoginUrl(userName, bucket, clientKeyTpl, redirectUrl, scope).then((url) => {
-    cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${url}">sign in</a> your account.</p>` });
+    cb(null, { statusCode: 302, headers: { location: url } });
   }).catch((err) => {
     cb(null, { statusCode: 500, headers: { 'Content-Type': 'text/html' }, body: JSON.stringify(err) });
   });
