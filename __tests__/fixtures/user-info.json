@@ -1,13 +1,5 @@
 {
   "name": "sync",
-  "outlook": {
-    "id": "1111111111111111",
-    "secret": "222222222222"
-  },
-  "google": {
-    "id": "3333333333",
-    "secret": "444444444"
-  },
   "rooms": [
     {
       "id": "526f6f6d2d4368696e612d5869616e2d533136@resource.calendar.google.com",
