@@ -13,7 +13,7 @@ custom:
   attendees_key: 'config/attendees.json'
   processed_events_key: 'cache/events.json'
   user_home_key: 'config/users/'
-  sync_days: 7
+  sync_days: 14
   home_bucket: 'outlook-google-sync-stg'
   outlook_client_id: ''
   outlook_client_secret: ''
