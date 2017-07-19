@@ -15,6 +15,10 @@ custom:
   user_home_key: 'config/users/'
   sync_days: 7
   home_bucket: 'outlook-google-sync-stg'
+  outlook_client_id: ''
+  outlook_client_secret: ''
+  google_client_id: ''
+  google_client_secret: ''
   stageVariables:
     home_bucket: ${self:custom.home_bucket}
     attendees_key: ${self:custom.attendees_key}
@@ -49,7 +53,7 @@ functions:
       client_key: ${self:custom.outlook_client_key}
     events:
       - http:
-          path: outlook/login/{id}
+          path: outlook/login
           method: get
           cors: true
           private: false
@@ -63,7 +67,7 @@ functions:
       token_key: ${self:custom.outlook_token_key}
     events:
       - http:
-          path: outlook/authorize/{id}
+          path: outlook/authorize
           method: get
           cors: true
           private: false
@@ -76,7 +80,7 @@ functions:
       client_key: ${self:custom.google_client_key}
     events:
       - http:
-          path: google/login/{id}
+          path: google/login
           method: get
           cors: true
           private: false
@@ -90,7 +94,7 @@ functions:
       token_key: ${self:custom.google_token_key}
     events:
       - http:
-          path: google/authorize/{id}
+          path: google/authorize
           method: get
           cors: true
           private: false
@@ -106,6 +110,11 @@ functions:
   addUser:
     handler: app.add_user
     timeout: 15
+    environment:
+      outlook_client_id: ${self:custom.outlook_client_id}
+      outlook_client_secret: ${self:custom.outlook_client_secret}
+      google_client_id: ${self:custom.google_client_id}
+      google_client_secret: ${self:custom.google_client_secret}
     events:
       - http:
           path: add/user

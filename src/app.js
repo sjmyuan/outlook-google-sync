@@ -16,22 +16,22 @@ import ignoreSubject from './ignore-subject';
 
 module.exports.login = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
-  const userName = _.get(event, 'pathParameters.id');
+  const userName = _.get(event, 'queryStringParameters.id');
   const stage = _.get(event, 'requestContext.stage');
   const scope = process.env.scope;
   const redirectPath = process.env.redirect_path;
   const clientKeyTpl = process.env.client_key;
-  const redirectUrl = `https://${event.headers.Host}/${stage}/${redirectPath}/${userName}`;
+  const redirectUrl = `https://${event.headers.Host}/${stage}/${redirectPath}`;
   getLoginUrl(userName, bucket, clientKeyTpl, redirectUrl, scope).then((url) => {
     cb(null, { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: `<p>Please <a href="${url}">sign in</a> your account.</p>` });
-  }).catch(() => {
+  }).catch((err) => {
     cb(null, { statusCode: 500, headers: { 'Content-Type': 'text/html' }, body: JSON.stringify(err) });
   });
 };
 
 module.exports.authorize = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
-  const userName = _.get(event, 'pathParameters.id');
+  const userName = _.get(event, 'queryStringParameters.state');
   const code = _.get(event, 'queryStringParameters.code');
   const host = _.get(event, 'headers.Host');
   const stage = _.get(event, 'requestContext.stage');
@@ -39,7 +39,7 @@ module.exports.authorize = (event, context, cb) => {
   const clientKeyTpl = process.env.client_key;
   const tokenKeyTpl = process.env.token_key;
   const scope = process.env.scope;
-  const redirectUrl = `https://${host}/${stage}/${redirectPath}/${userName}`;
+  const redirectUrl = `https://${host}/${stage}/${redirectPath}`;
 
   console.log(`The code is ${code}`);
   console.log(`The redirect url is ${redirectUrl}`);
@@ -119,12 +119,23 @@ module.exports.add_user = (event, context, cb) => {
     console.log('Request body is null');
     return false;
   }
+
+  const googleClient = {
+    id: process.env.google_client_id,
+    secret: process.env.google_client_secret,
+  };
+
+  const outlookClient = {
+    id: process.env.outlook_client_id,
+    secret: process.env.outlook_client_secret,
+  };
+
   console.log(`New user is ${newUser}`);
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const googleClientKeyTpl = _.get(event, 'stageVariables.google_client_key');
   const outlookClientKeyTpl = _.get(event, 'stageVariables.outlook_client_key');
-  addUser(newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl)
+  addUser(newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl, googleClient, outlookClient)
     .then(() => {
       cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Success to add user' });
       console.log('Success to add user');

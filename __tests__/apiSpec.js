@@ -76,7 +76,7 @@ describe('api', () => {
       AWS.S3.restore();
     });
     it('should return success', () => {
-      data = [{Prefix:'config/users/user1/'}, {Prefix:'config/users/user2/'}];
+      data = [{ Prefix: 'config/users/user1/' }, { Prefix: 'config/users/user2/' }];
       const result = api.listFoldersInS3('bucket', 'config/users/');
       listObjects.should.have.been.calledWith({ Bucket: 'bucket', Delimiter: '/', Prefix: 'config/users/' });
       return expect(result).eventually.to.deep.equal(['user1', 'user2']);
@@ -153,8 +153,16 @@ describe('api', () => {
     });
     it('should create the user structure', () => {
       const newUser = require('./fixtures/user-info.json');
+      const outlookClient = {
+        id: '1111111111111111',
+        secret: '222222222222',
+      };
+      const googleClient = {
+        id: '3333333333',
+        secret: '444444444',
+      };
 
-      const result = api.addUser(newUser, 'bucket', 'config/=USER=/info.json', 'config/=USER=/client/google.json', 'config/=USER=/client/outlook.json');
+      const result = api.addUser(newUser, 'bucket', 'config/=USER=/info.json', 'config/=USER=/client/google.json', 'config/=USER=/client/outlook.json', googleClient, outlookClient);
 
       putObject.should.have.been.calledWith({ Bucket: 'bucket', Key: 'config/sync/info.json', Body: JSON.stringify(newUser) });
       putObject.should.have.been.calledWith({

@@ -215,12 +215,12 @@ const listFoldersInS3 = (bucket, prefix) => {
 
 const fillInUser = (tpl, user) => tpl.replace(/=USER=/g, user);
 
-const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl) => {
+const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl, google, outlook) => {
   const userInfoKey = fillInUser(userInfoKeyTpl, newUser.name);
   const googleClientKey = fillInUser(googleClientKeyTpl, newUser.name);
   const outlookClientKey = fillInUser(outlookClientKeyTpl, newUser.name);
   const outlookClient = {
-    client: newUser.outlook,
+    client: outlook,
     auth: {
       tokenHost: 'https://login.microsoftonline.com',
       authorizePath: 'common/oauth2/v2.0/authorize',
@@ -228,7 +228,7 @@ const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookCli
     },
   };
   const googleClient = {
-    client: newUser.google,
+    client: google,
     auth: {
       tokenHost: 'https://accounts.google.com',
       authorizePath: 'o/oauth2/auth',
@@ -365,7 +365,8 @@ const getLoginUrl = (user, bucket, clientKeyTpl, redirectUrl, scope) => {
   const clientKey = fillInUser(clientKeyTpl, user);
   return readObjectFromS3(bucket, clientKey).then(client => getAuthUrl(oauth.create(client),
       redirectUrl,
-      scope.replace(/,/g, ' ')));
+      scope.replace(/,/g, ' '),
+      user));
 };
 
 export { sendTopic,

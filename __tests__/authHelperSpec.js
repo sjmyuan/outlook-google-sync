@@ -21,14 +21,14 @@ describe('authHelper', () => {
     it('should returu the correct outlook login url', () => {
       const credential = require('./fixtures/outlook-client.json');
       const oauth2 = oauth.create(credential);
-      const result = getAuthUrl(oauth2, 'https://redirect', 'read offline');
-      expect(result).to.equal('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?redirect_uri=https%3A%2F%2Fredirect&scope=read%20offline&access_type=offline&prompt=consent&response_type=code&client_id=test%20id');
+      const result = getAuthUrl(oauth2, 'https://redirect', 'read offline', 'test');
+      expect(result).to.equal('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?redirect_uri=https%3A%2F%2Fredirect&scope=read%20offline&access_type=offline&prompt=consent&state=test&response_type=code&client_id=test%20id');
     });
     it('should returu the correct google login url', () => {
       const credential = require('./fixtures/google-client.json');
       const oauth2 = oauth.create(credential);
-      const result = getAuthUrl(oauth2, 'https://redirect', 'read offline');
-      expect(result).to.equal('https://accounts.google.com/o/oauth2/auth?redirect_uri=https%3A%2F%2Fredirect&scope=read%20offline&access_type=offline&prompt=consent&response_type=code&client_id=test%20id');
+      const result = getAuthUrl(oauth2, 'https://redirect', 'read offline', 'test');
+      expect(result).to.equal('https://accounts.google.com/o/oauth2/auth?redirect_uri=https%3A%2F%2Fredirect&scope=read%20offline&access_type=offline&prompt=consent&state=test&response_type=code&client_id=test%20id');
     });
   });
   describe('getTokenFromCode', () => {
