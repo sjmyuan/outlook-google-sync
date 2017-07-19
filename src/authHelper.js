@@ -1,17 +1,18 @@
 import _ from 'lodash';
 
-const getAuthUrl = (oauth2, redirect_uri, scope) => {
+const getAuthUrl = (oauth2, redirect_uri, scope, user) => {
   const returnVal = oauth2.authorizationCode.authorizeURL({
     redirect_uri,
     scope,
     access_type: 'offline',
     prompt: 'consent',
+    state: user,
   });
   console.log(`Generated auth url: ${returnVal}`);
   return returnVal;
 };
 
-const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope, callback) => new Promise((resolve, reject) => {
+const getTokenFromCode = (oauth2, auth_code, redirect_uri, scope) => new Promise((resolve, reject) => {
   oauth2.authorizationCode.getToken({
     code: auth_code,
     redirect_uri,

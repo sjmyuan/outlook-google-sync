@@ -1,0 +1,10 @@
+{
+  "name": "sync",
+  "rooms": [
+    {
+      "id": "526f6f6d2d4368696e612d5869616e2d533136@resource.calendar.google.com",
+      "title": "Room - 12"
+    }
+  ],
+  "filters": [ "Stand Up" ]
+}
