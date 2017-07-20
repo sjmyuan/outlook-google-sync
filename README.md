@@ -8,5 +8,20 @@
 ## Purpose
 This repo is used to synchronize events from Outlook to Gmail. it use OAuth2.0 to access the email api.
 
+## Features
++ Support OAuth2.0
++ Support filtering duplicated events
++ Support booking rooms for Gmail
++ Support ignoring events by subject
++ Support ordering rooms 
+
 ## How to use
-TODO
+1. Register user using /add/user
+2. Add involved attendees using /add/attendees
+3. Authenticate Outlook using /outlook/login?id=<user id>
+4. Authenticate Gmail using /google/login?id=<user id>
+
+## To do list
++ Add configuration ui
++ Send authentication email
++ Support booking room for no location events
