@@ -26,3 +26,4 @@ This repo is used to synchronize events from Outlook to Gmail. it use OAuth2.0 t
 + Send authentication email
 + Support booking room for no location events
 + Only synchronize events with valid room
++ Support email group
