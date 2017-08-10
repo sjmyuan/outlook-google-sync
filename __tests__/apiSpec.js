@@ -190,4 +190,19 @@ describe('api', () => {
       expect(result).eventually.to.deep.equal(['success', 'success', 'success']);
     });
   });
+  describe('email', () => {
+    it('should send the email success', () => {
+      const server = { user: 'my.help.robot@gmail.com', pass: '' };
+      const googleLoginUrl = 'http://www.baidu.com';
+      const outlookLoginUrl = 'http://www.google.com';
+      const options = {
+        from: 'my.help.robot@gmail.com',
+        to: 'jmshang@thoughtworks.com',
+        subject: 'Please verify your gmail and outlook token',
+        html: `<a herf="${googleLoginUrl}">Gmail</a> <br/> <a herf="${outlookLoginUrl}">Outlook</a>`,
+      };
+
+      expect(api.sendEmail(server, options)).eventually.to.equal('success');
+    });
+  });
 });
