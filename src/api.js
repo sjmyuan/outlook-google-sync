@@ -115,6 +115,11 @@ const convertOutlookToGoogle = (attendees, event, room) => {
     if (_.isUndefined(info)) {
       return collect;
     }
+
+    if (_.isArray(info.google)) {
+      return [...collect, ..._.map(info.google, ele => ({ email: ele }))];
+    }
+
     return [...collect, { email: info.google }];
   }, []);
   validAttendees.push({ email: room.id });
