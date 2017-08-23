@@ -198,6 +198,16 @@ const readObjectFromS3 = (bucket, key) => {
     .then(data => JSON.parse(data.Body));
 };
 
+const objectExistInS3 = (bucket, key) => {
+  const s3 = new AWS.S3();
+  const params = {
+    Bucket: bucket,
+    Key: key,
+  };
+  return s3.headObject(params).promise()
+    .then(() => true).catch(() => false);
+};
+
 const writeObjectToS3 = (bucket, key, obj) => {
   const s3 = new AWS.S3();
   const putParams = {
@@ -220,8 +230,12 @@ const listFoldersInS3 = (bucket, prefix) => {
 
 const fillInUser = (tpl, user) => tpl.replace(/=USER=/g, user);
 
-const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl, google, outlook) => {
+const saveUserBasicInfo = (newUser, bucket, userInfoKeyTpl) => {
   const userInfoKey = fillInUser(userInfoKeyTpl, newUser.name);
+  return writeObjectToS3(bucket, userInfoKey, newUser);
+};
+
+const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTpl, outlookClientKeyTpl, google, outlook) => {
   const googleClientKey = fillInUser(googleClientKeyTpl, newUser.name);
   const outlookClientKey = fillInUser(outlookClientKeyTpl, newUser.name);
   const outlookClient = {
@@ -240,11 +254,17 @@ const addUser = (newUser, bucket, userInfoKeyTpl, googleClientKeyTpl, outlookCli
       tokenPath: 'o/oauth2/token',
     },
   };
-  return Promise.all([
-    writeObjectToS3(bucket, userInfoKey, newUser),
+  return listFoldersInS3(bucket, userHomeKey).then((users) => {
+    if (users.contain(newUser.name)) {
+      return Promise.reject(`${newUser.name} already exist`);
+    }
+
+    return '';
+  }).then(() => Promise.all([
+    saveUserBasicInfo(newUser, bucket, userInfoKeyTpl),
     writeObjectToS3(bucket, googleClientKey, googleClient),
     writeObjectToS3(bucket, outlookClientKey, outlookClient),
-  ]);
+  ]));
 };
 
 const addAttendees = (newAttendees, bucket, attendeesKey) =>
@@ -374,6 +394,36 @@ const getLoginUrl = (user, bucket, clientKeyTpl, redirectUrl, scope) => {
       user));
 };
 
+const getUserInfo = (user,
+  bucket,
+  userInfoKeyTpl,
+  googleTokenKeyTpl,
+  outlookTokenKeyTpl,
+  attendeesKey,
+  googleLoginUrl,
+  outlookLoginUrl) => {
+  const userInfoKey = fillInUser(userInfoKeyTpl, user);
+  const googleTokenKey = fillInUser(googleTokenKeyTpl, user);
+  const outlookTokenKey = fillInUser(outlookTokenKeyTpl, user);
+
+  Promise.all([
+    objectExistInS3(bucket, googleTokenKey),
+    objectExistInS3(bucket, outlookTokenKey),
+    readObjectFromS3(bucket, userInfoKey),
+    readObjectFromS3(bucket, attendeesKey),
+  ]).then((data) => {
+    const [googleIsAvailable, outlookIsAvailable, info, attendees] = data;
+    return {
+      info,
+      googleIsAvailable,
+      outlookIsAvailable,
+      googleLoginUrl,
+      outlookLoginUrl,
+      attendees,
+    };
+  });
+};
+
 export { sendTopic,
   sendMessage,
   fetchMessage,
@@ -395,4 +445,6 @@ export { sendTopic,
   authorize,
   getLoginUrl,
   fillInUser,
+  getUserInfo,
+  saveUserBasicInfo,
 };

@@ -1,5 +1,6 @@
 {
   "name": "sync",
+  "password": "test",
   "rooms": [
     {
       "id": "526f6f6d2d4368696e612d5869616e2d533136@resource.calendar.google.com",

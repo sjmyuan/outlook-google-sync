@@ -24,7 +24,10 @@ custom:
     attendees_key: ${self:custom.attendees_key}
     user_info_key: ${self:custom.user_info_key}
     google_client_key: ${self:custom.google_client_key}
+    google_token_key: ${self:custom.google_token_key}
     outlook_client_key: ${self:custom.outlook_client_key}
+    outlook_token_key: ${self:custom.outlook_token_key}
+    user_home_key: ${self:custom.user_home_key}
 
 provider:
   name: aws
@@ -104,6 +107,33 @@ functions:
     events:
       - http:
           path: add/attendee
+          method: post
+          cors: true
+          private: false
+  userLogin:
+    handler: app.login_user
+    timeout: 15
+    events:
+      - http:
+          path: user/login
+          method: post
+          cors: true
+          private: false
+  getUserConfig:
+    handler: app.get_user_config
+    timeout: 15
+    events:
+      - http:
+          path: user/config
+          method: get
+          cors: true
+          private: false
+  saveUserConfig:
+    handler: app.save_user_config
+    timeout: 15
+    events:
+      - http:
+          path: user/config
           method: post
           cors: true
           private: false
