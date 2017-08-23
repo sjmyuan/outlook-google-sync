@@ -121,7 +121,8 @@ module.exports.delete_attendee = (event, context, cb) => {
     console.log('Request body is null');
     return false;
   }
-  console.log(`Delete attendees is ${attendees}`);
+  console.log('Delete attendees is:');
+  console.log(attendees);
   deleteAttendees(attendees, bucket, attendeesKey)
       .then(() => {
         cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add attendees' });
@@ -207,7 +208,7 @@ module.exports.login_user = (event, context, cb) => {
       if (data.info.password !== newUser.password) { return Promise.reject('password is wrong'); }
       return '';
     }).then(() => {
-      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'sucess' });
+      cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'success' });
     }).catch((err) => {
       cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
     });
