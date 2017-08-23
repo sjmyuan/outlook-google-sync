@@ -32,6 +32,7 @@ custom:
     user_home_key: ${self:custom.user_home_key}
     outlook_login_path: ${self:custom.outlook_login_path}
     google_login_path: ${self:custom.google_login_path}
+    token_key: ${self:custom.token_key}
 
 provider:
   name: aws
