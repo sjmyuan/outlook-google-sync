@@ -230,6 +230,7 @@ module.exports.get_user_config = (event, context, cb) => {
 
   getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, googleLoginUrl, outlookLoginUrl)
     .then((data) => {
+      delete data.info.password
       cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
     }).catch((err) => {
       cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
