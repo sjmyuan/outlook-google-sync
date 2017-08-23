@@ -3,6 +3,8 @@ service: outlook-google-sync
 custom:
   outlook_redirect_path: 'outlook/authorize'
   google_redirect_path: 'google/authorize'
+  outlook_login_path: 'outlook/login'
+  google_login_path: 'google/login'
   outlook_scope: 'openid,offline_access,Calendars.Read'
   google_scope: 'https://www.googleapis.com/auth/calendar'
   outlook_client_key: 'config/users/=USER=/client/outlook.json'
@@ -28,6 +30,8 @@ custom:
     outlook_client_key: ${self:custom.outlook_client_key}
     outlook_token_key: ${self:custom.outlook_token_key}
     user_home_key: ${self:custom.user_home_key}
+    outlook_login_path: ${self:custom.outlook_login_path}
+    google_login_path: ${self:custom.google_login_path}
 
 provider:
   name: aws
@@ -56,7 +60,7 @@ functions:
       client_key: ${self:custom.outlook_client_key}
     events:
       - http:
-          path: outlook/login
+          path: ${self:custom.outlook_login_path}
           method: get
           cors: true
           private: false
@@ -70,7 +74,7 @@ functions:
       token_key: ${self:custom.outlook_token_key}
     events:
       - http:
-          path: outlook/authorize
+          path: ${self:custom.outlook_redirect_path}
           method: get
           cors: true
           private: false
@@ -83,7 +87,7 @@ functions:
       client_key: ${self:custom.google_client_key}
     events:
       - http:
-          path: google/login
+          path: ${self:custom.google_login_path}
           method: get
           cors: true
           private: false
@@ -97,7 +101,7 @@ functions:
       token_key: ${self:custom.google_token_key}
     events:
       - http:
-          path: google/authorize
+          path: ${self:custom.google_redirect_path}
           method: get
           cors: true
           private: false

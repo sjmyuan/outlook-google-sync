@@ -217,13 +217,18 @@ module.exports.login_user = (event, context, cb) => {
 module.exports.get_user_config = (event, context, cb) => {
   console.log(event);
   const userName = _.get(event, 'queryStringParameters.id');
+  const stage = _.get(event, 'requestContext.stage');
+  const googleLoginPath = _.get(event, 'stageVariables.google_login_path');
+  const outlookLoginPath = _.get(event, 'stageVariables.outlook_login_path');
+  const googleLoginUrl = `https://${event.headers.Host}/${stage}/${googleLoginPath}?id=${userName}`;
+  const outlookLoginUrl = `https://${event.headers.Host}/${stage}/${outlookLoginPath}?id=${userName}`;
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
   const googleTokenKeyTpl = _.get(event, 'stageVariables.google_token_key');
   const attendeesKey = _.get(event, 'stageVariables.attendees_key');
 
-  getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
+  getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, googleLoginUrl, outlookLoginUrl)
     .then((data) => {
       cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
     }).catch((err) => {
