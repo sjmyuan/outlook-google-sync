@@ -6,6 +6,7 @@ import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import {
   addUser,
   addAttendees,
+  deleteAttendees,
   syncEvents,
   refreshTokens,
   authorize,
@@ -111,16 +112,36 @@ module.exports.add_attendee = (event, context, cb) => {
       });
 };
 
+module.exports.delete_attendee = (event, context, cb) => {
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
+  const attendees = JSON.parse(event.body);
+  if (_.isNull(attendees)) {
+    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
+    console.log('Request body is null');
+    return false;
+  }
+  console.log(`Delete attendees is ${attendees}`);
+  deleteAttendees(attendees, bucket, attendeesKey)
+      .then(() => {
+        cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add attendees' });
+        console.log('Success to delete attendee');
+      }).catch((err) => {
+        cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
+        console.log(`Failed to delete attendee, error message is ${err}`);
+      });
+};
+
 module.exports.add_user = (event, context, cb) => {
   console.log(event);
   const newUser = JSON.parse(event.body);
-  if (_.has(newUser, 'name')) {
+  if (!_.has(newUser, 'name')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find user name' });
     console.log('can not find user name');
     return false;
   }
 
-  if (_.has(newUser, 'password')) {
+  if (!_.has(newUser, 'password')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find user password' });
     console.log('can not find user password');
     return false;
@@ -163,13 +184,13 @@ module.exports.add_user = (event, context, cb) => {
 module.exports.login_user = (event, context, cb) => {
   console.log(event);
   const newUser = JSON.parse(event.body);
-  if (_.has(newUser, 'name')) {
+  if (!_.has(newUser, 'name')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find user name' });
     console.log('can not find user name');
     return false;
   }
 
-  if (_.has(newUser, 'password')) {
+  if (!_.has(newUser, 'password')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find user password' });
     console.log('can not find user password');
     return false;
@@ -212,25 +233,25 @@ module.exports.get_user_config = (event, context, cb) => {
 module.exports.save_user_config = (event, context, cb) => {
   console.log(event);
   const data = JSON.parse(event.body);
-  if (_.has(data, 'info.name')) {
+  if (!_.has(data, 'info.name')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find user name' });
     console.log('can not find user name');
     return false;
   }
 
-  if (_.has(data, 'info.rooms')) {
+  if (!_.has(data, 'info.rooms')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find rooms' });
     console.log('can not find user rooms');
     return false;
   }
 
-  if (_.has(data, 'info.filters')) {
+  if (!_.has(data, 'info.filters')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find filters' });
     console.log('can not find user filters');
     return false;
   }
 
-  if (_.has(data, 'attendees')) {
+  if (!_.has(data, 'attendees')) {
     cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find attendees' });
     console.log('can not find attendees');
     return false;

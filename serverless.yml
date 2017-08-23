@@ -110,6 +110,15 @@ functions:
           method: post
           cors: true
           private: false
+  deleteAttendee:
+    handler: app.delete_attendee
+    timeout: 15
+    events:
+      - http:
+          path: delete/attendee
+          method: post
+          cors: true
+          private: false
   userLogin:
     handler: app.login_user
     timeout: 15

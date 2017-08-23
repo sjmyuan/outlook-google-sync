@@ -255,7 +255,7 @@ const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTp
     },
   };
   return listFoldersInS3(bucket, userHomeKey).then((users) => {
-    if (users.contain(newUser.name)) {
+    if (_.findIndex(users, ele => ele === newUser.name) >= 0) {
       return Promise.reject(`${newUser.name} already exist`);
     }
 
@@ -279,6 +279,17 @@ const addAttendees = (newAttendees, bucket, attendeesKey) =>
     return writeObjectToS3(bucket, attendeesKey, allAttendees);
   });
 
+const deleteAttendees = (attendees, bucket, attendeesKey) =>
+  readObjectFromS3(bucket, attendeesKey)
+  .catch(() => Promise.resolve([]))
+  .then((oldAttendees) => {
+    console.log('Old attendees is ');
+    console.log(oldAttendees);
+    const allAttendees = _.differenceBy(oldAttendees, attendees, ele => ele.outlook);
+    console.log('All attendees is ');
+    console.log(allAttendees);
+    return writeObjectToS3(bucket, attendeesKey, allAttendees);
+  });
 
 const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKeyTpl, users, processedEvents, syncDays) =>
   Promise.all(_.map(users, (user) => {
@@ -406,7 +417,7 @@ const getUserInfo = (user,
   const googleTokenKey = fillInUser(googleTokenKeyTpl, user);
   const outlookTokenKey = fillInUser(outlookTokenKeyTpl, user);
 
-  Promise.all([
+  return Promise.all([
     objectExistInS3(bucket, googleTokenKey),
     objectExistInS3(bucket, outlookTokenKey),
     readObjectFromS3(bucket, userInfoKey),
@@ -440,6 +451,7 @@ export { sendTopic,
   listFoldersInS3,
   addUser,
   addAttendees,
+  deleteAttendees,
   syncEvents,
   refreshTokens,
   authorize,
