@@ -321,31 +321,11 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
                 allEvents: events.value,
               };
             });
-    });
+    }).catch(() => ({ validEvents: [], allEvents: [] }));
   })).then(events => ({
     validEvents: _.uniqBy(_.flatMap(events, ele => ele.validEvents), ele => ele.id),
     allEvents: _.uniqBy(_.flatMap(events, ele => ele.allEvents), ele => ele.iCalUId),
   }));
-
-const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey, server) =>
-  writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
-    .then(() => readObjectFromS3(bucket, attendeesKey)
-        .catch(() => Promise.resolve([]))
-        .then(attendees => Promise.all(
-        _.map(
-          totalEvents.validEvents,
-          message => getAvailableRoom(message.info.rooms,
-            message.event.start,
-            message.event.end,
-            message.token.token.access_token,
-          ).then(room =>
-              createGoogleEvent(
-                convertOutlookToGoogle(attendees, message.event, room),
-                message.token.token.access_token,
-              )).catch(() => {
-                sendNoRoomEmail(server, message.event, attendees);
-              }),
-        ))));
 
 const sendEmail = (server, options) => new Promise((resolve, reject) => {
   const transporter = nodemailer.createTransport({
@@ -374,6 +354,31 @@ const sendNoRoomEmail = (server, event, allAttendees) => {
   };
   return sendEmail(server, options);
 };
+
+const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey, server) =>
+  writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
+    .then(() => readObjectFromS3(bucket, attendeesKey)
+        .catch(() => Promise.resolve([]))
+        .then(attendees => Promise.all(
+        _.map(
+          totalEvents.validEvents,
+          message => getAvailableRoom(message.info.rooms,
+            message.event.start,
+            message.event.end,
+            message.token.token.access_token,
+          ).then(room =>
+              createGoogleEvent(
+                convertOutlookToGoogle(attendees, message.event, room),
+                message.token.token.access_token,
+              )).catch(() => {
+                sendNoRoomEmail(server, message.event, attendees).catch((err) => {
+                  console.log('Fialed to send email');
+                  console.log(server);
+                  console.log(message.event);
+                  console.log(err);
+                });
+              }),
+        ))));
 
 const syncEvents = (bucket,
   processedEventsKey,
