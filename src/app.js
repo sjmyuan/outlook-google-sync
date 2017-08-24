@@ -30,7 +30,7 @@ module.exports.login = (event, context, cb) => {
   const redirectPath = process.env.redirect_path;
   const clientKeyTpl = process.env.client_key;
   const redirectUrl = `https://${event.headers.Host}/${stage}/${redirectPath}`;
-  verify(token, tokenKey).catch(() => {
+  verify(token, tokenKey, userName).then(() => {
     getLoginUrl(userName, bucket, clientKeyTpl, redirectUrl, scope).then((url) => {
       cb(null, { statusCode: 302, headers: { location: url } });
     }).catch((err) => {
@@ -244,7 +244,7 @@ module.exports.get_user_config = (event, context, cb) => {
   const tokenKey = _.get(event, 'stageVariables.token_key');
   const token = _.get(event, 'headers.email-token');
 
-  verify(token, tokenKey).catch(() => {
+  verify(token, tokenKey, userName).then(() => {
     getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, googleLoginUrl, outlookLoginUrl)
       .then((data) => {
         delete data.info.password;
@@ -292,7 +292,7 @@ module.exports.save_user_config = (event, context, cb) => {
   const tokenKey = _.get(event, 'stageVariables.token_key');
   const token = _.get(event, 'headers.email-token');
 
-  verify(token, tokenKey).catch(() => {
+  verify(token, tokenKey, data.info.name).then(() => {
     getUserInfo(data.info.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
       .then((oldInfo) => {
         const userInfo = oldInfo.info;

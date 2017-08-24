@@ -18,7 +18,7 @@ describe('token', () => {
 
   describe('verify', () => {
     it('should return true for signed token', () => {
-      return expect(token.verify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjM2MDAsImRhdGEiOiJ0ZXN0IiwiaWF0IjowfQ.ACw2LSfCN_tlTT0TQPGrsRCJ1OFutoP_x9i0tWQ2KTU', 'test')).eventually.to.equal(true);
+      return expect(token.verify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjM2MDAsImRhdGEiOiJ0ZXN0IiwiaWF0IjowfQ.ACw2LSfCN_tlTT0TQPGrsRCJ1OFutoP_x9i0tWQ2KTU', 'test', 'test')).eventually.to.deep.equal({ exp: 3600, data: 'test', iat: 0 });
     });
   });
 });

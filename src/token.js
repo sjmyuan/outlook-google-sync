@@ -9,9 +9,9 @@ const sign = (payload, key) => new Promise((resolve, reject) => {
   });
 });
 
-const verify = (token, key) => new Promise((resolve, reject) => {
+const verify = (token, key, data) => new Promise((resolve, reject) => {
   jwt.verify(token, key, (err, decoded) => {
-    if (err) { reject(false); } else { resolve(true); }
+    if (err) { reject(err); } else if (decoded.data === data) { resolve(decoded); } else { reject('token data is not matched'); }
   });
 });
 
