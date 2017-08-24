@@ -21,6 +21,7 @@ custom:
   outlook_client_secret: ''
   google_client_id: ''
   google_client_secret: ''
+  token_key: ''
   stageVariables:
     home_bucket: ${self:custom.home_bucket}
     attendees_key: ${self:custom.attendees_key}
