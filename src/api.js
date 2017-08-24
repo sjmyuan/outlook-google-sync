@@ -436,10 +436,9 @@ const getUserInfo = (user,
 };
 const sendEmail = (server, options) => new Promise((resolve, reject) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true,
+    secure: true, // use SSL
     auth: server,
   });
   transporter.sendMail(options, (error, info) => {
