@@ -20,11 +20,11 @@ This repo is used to synchronize events from Outlook to Gmail. it use OAuth2.0 t
 ## How to use
 1. Register user using /add/user
 2. Edit user configuration using /user/config
-  * Add involved attendees
-  * Authenticate Outlook
-  * Authenticate Gmail
-  * Add rooms
-  * Add ignored subject
+    * Add involved attendees
+    * Authenticate Outlook
+    * Authenticate Gmail
+    * Add rooms
+    * Add ignored subject
 
 ## To do list
 + Add configuration ui
