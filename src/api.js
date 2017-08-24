@@ -467,21 +467,6 @@ const getUserInfo = (user,
     };
   });
 };
-const sendEmail = (server, options) => new Promise((resolve, reject) => {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // use SSL
-    auth: server,
-  });
-  transporter.sendMail(options, (error, info) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(info);
-    }
-  });
-});
 
 export { sendTopic,
   sendMessage,
