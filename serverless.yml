@@ -22,6 +22,8 @@ custom:
   google_client_id: ''
   google_client_secret: ''
   token_key: ''
+  email_address: ''
+  email_password: ''
   stageVariables:
     home_bucket: ${self:custom.home_bucket}
     attendees_key: ${self:custom.attendees_key}
@@ -283,6 +285,8 @@ functions:
       tgt_token_key: ${self:custom.google_token_key}
       attendees_key: ${self:custom.attendees_key}
       sync_days: ${self:custom.sync_days}
+      email_address: ${self:custom.email_address}
+      email_password: ${self:custom.email_password}
     events:
       - schedule: rate(60 minutes)
 resources:

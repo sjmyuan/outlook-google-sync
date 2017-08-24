@@ -3,6 +3,7 @@ import _ from 'lodash';
 import rp from 'request-promise-native';
 import uuid from 'node-uuid';
 import moment from 'moment-timezone';
+import nodemailer from 'nodemailer';
 
 const oauth = require('simple-oauth2');
 
@@ -109,19 +110,21 @@ const fetchGoogleEvents = (token, days) => {
   return rp(option);
 };
 
+const mapAttendees = (allAttendees, eventAttendees) => _.reduce(eventAttendees, (collect, attendee) => {
+  const info = _.find(allAttendees, ele => ele.outlook === attendee.emailAddress.address);
+  if (_.isUndefined(info)) {
+    return collect;
+  }
+
+  if (_.isArray(info.google)) {
+    return [...collect, ..._.map(info.google, ele => ({ email: ele }))];
+  }
+
+  return [...collect, { email: info.google }];
+}, []);
+
 const convertOutlookToGoogle = (attendees, event, room) => {
-  const validAttendees = _.reduce(event.attendees, (collect, attendee) => {
-    const info = _.find(attendees, ele => ele.outlook === attendee.emailAddress.address);
-    if (_.isUndefined(info)) {
-      return collect;
-    }
-
-    if (_.isArray(info.google)) {
-      return [...collect, ..._.map(info.google, ele => ({ email: ele }))];
-    }
-
-    return [...collect, { email: info.google }];
-  }, []);
+  const validAttendees = mapAttendees(attendees, event.attendees);
   validAttendees.push({ email: room.id });
   return {
     summary: event.subject,
@@ -324,7 +327,7 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
     allEvents: _.uniqBy(_.flatMap(events, ele => ele.allEvents), ele => ele.iCalUId),
   }));
 
-const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey) =>
+const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey, server) =>
   writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
     .then(() => readObjectFromS3(bucket, attendeesKey)
         .catch(() => Promise.resolve([]))
@@ -339,8 +342,38 @@ const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendee
               createGoogleEvent(
                 convertOutlookToGoogle(attendees, message.event, room),
                 message.token.token.access_token,
-              )),
+              )).catch(() => {
+                sendNoRoomEmail(server, message.event, attendees);
+              }),
         ))));
+
+const sendEmail = (server, options) => new Promise((resolve, reject) => {
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // use SSL
+    auth: server,
+  });
+  transporter.sendMail(options, (error, info) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(info);
+    }
+  });
+});
+
+const sendNoRoomEmail = (server, event, allAttendees) => {
+  const validAttendees = mapAttendees(allAttendees, event.attendees);
+  const targetEmails = _.reduce(validAttendees, (acc, item) => `${item.email},${acc}`, '');
+  const options = {
+    from: server.user,
+    to: targetEmails,
+    subject: `Failed to book meeting <${event.subject}> from ${event.start.dateTime} to ${event.end.dateTime}`,
+    html: `<html><body>${event.bodyPreview}</body></html>`,
+  };
+  return sendEmail(server, options);
+};
 
 const syncEvents = (bucket,
   processedEventsKey,
@@ -349,7 +382,8 @@ const syncEvents = (bucket,
   srcTokenKeyTpl,
   tgtTokenKeyTpl,
   syncDays,
-  attendeesKey) => Promise.all([
+  attendeesKey,
+  emailServer) => Promise.all([
     listFoldersInS3(bucket, userHomeKey),
     readObjectFromS3(bucket, processedEventsKey).catch(() => Promise.resolve([])),
   ]).then((userAndEvent) => {
@@ -362,7 +396,7 @@ const syncEvents = (bucket,
       users,
       processedEvents,
       syncDays);
-  }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKey));
+  }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKey, emailServer));
 
 const refreshTokens = (bucket, userHomeKey, clientKeyTpl, tokenKeyTpl) => listFoldersInS3(bucket, userHomeKey)
     .then(users => Promise.all(_.map(users, (user) => {

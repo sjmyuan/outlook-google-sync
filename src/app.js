@@ -89,6 +89,12 @@ module.exports.sync_events = (event) => {
   const tgtTokenKeyTpl = process.env.tgt_token_key;
   const syncDays = process.env.sync_days;
   const attendeesKey = process.env.attendees_key;
+  const emailAddress = process.env.email_address;
+  const emailPassword = process.env.email_password;
+  const emailServer = {
+    user: emailAddress,
+    pass: emailPassword,
+  };
 
   syncEvents(bucket,
     processedEventsKey,
@@ -98,6 +104,7 @@ module.exports.sync_events = (event) => {
     tgtTokenKeyTpl,
     syncDays,
     attendeesKey,
+    emailServer,
   ).then(() => {
     console.log('Success to sync events');
   }).catch((err) => {
