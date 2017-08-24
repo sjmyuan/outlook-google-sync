@@ -454,7 +454,7 @@ const getUserInfo = (user,
     objectExistInS3(bucket, googleTokenKey),
     objectExistInS3(bucket, outlookTokenKey),
     readObjectFromS3(bucket, userInfoKey),
-    readObjectFromS3(bucket, attendeesKey),
+    readObjectFromS3(bucket, attendeesKey).catch(() => []),
   ]).then((data) => {
     const [googleIsAvailable, outlookIsAvailable, info, attendees] = data;
     return {

@@ -26,8 +26,8 @@ module.exports.login = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const tokenKey = _.get(event, 'stageVariables.token_key');
   const userName = _.get(event, 'queryStringParameters.id');
+  const token = _.get(event, 'queryStringParameters.token');
   const stage = _.get(event, 'requestContext.stage');
-  const token = _.get(event, 'headers.email-token');
   const scope = process.env.scope;
   const redirectPath = process.env.redirect_path;
   const clientKeyTpl = process.env.client_key;
@@ -246,8 +246,6 @@ module.exports.get_user_config = (event, context, cb) => {
   const stage = _.get(event, 'requestContext.stage');
   const googleLoginPath = _.get(event, 'stageVariables.google_login_path');
   const outlookLoginPath = _.get(event, 'stageVariables.outlook_login_path');
-  const googleLoginUrl = `https://${event.headers.Host}/${stage}/${googleLoginPath}?id=${userName}`;
-  const outlookLoginUrl = `https://${event.headers.Host}/${stage}/${outlookLoginPath}?id=${userName}`;
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
@@ -255,6 +253,8 @@ module.exports.get_user_config = (event, context, cb) => {
   const attendeesKey = _.get(event, 'stageVariables.attendees_key');
   const tokenKey = _.get(event, 'stageVariables.token_key');
   const token = _.get(event, 'headers.email-token');
+  const googleLoginUrl = `https://${event.headers.Host}/${stage}/${googleLoginPath}?id=${userName}&token=${token}`;
+  const outlookLoginUrl = `https://${event.headers.Host}/${stage}/${outlookLoginPath}?id=${userName}&token=${token}`;
 
   verify(token, tokenKey, userName).then(() => {
     getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, googleLoginUrl, outlookLoginUrl)
