@@ -64,7 +64,18 @@ functions:
       - http:
           path: ${self:custom.outlook_login_path}
           method: get
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   outlookAuthorize:
     handler: app.authorize
@@ -91,7 +102,18 @@ functions:
       - http:
           path: ${self:custom.google_login_path}
           method: get
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   googleAuthorize:
     handler: app.authorize
@@ -114,7 +136,18 @@ functions:
       - http:
           path: add/attendee
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   deleteAttendee:
     handler: app.delete_attendee
@@ -123,7 +156,18 @@ functions:
       - http:
           path: delete/attendee
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   userLogin:
     handler: app.login_user
@@ -132,7 +176,18 @@ functions:
       - http:
           path: user/login
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   getUserConfig:
     handler: app.get_user_config
@@ -141,7 +196,18 @@ functions:
       - http:
           path: user/config
           method: get
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   saveUserConfig:
     handler: app.save_user_config
@@ -150,7 +216,18 @@ functions:
       - http:
           path: user/config
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   addUser:
     handler: app.add_user
@@ -164,7 +241,18 @@ functions:
       - http:
           path: add/user
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   refreshOutlookToken:
     handler: app.refresh_token 
