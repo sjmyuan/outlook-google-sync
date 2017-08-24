@@ -254,6 +254,7 @@ const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTp
       tokenPath: 'o/oauth2/token',
     },
   };
+
   return listFoldersInS3(bucket, userHomeKey).then((users) => {
     if (_.findIndex(users, ele => ele === newUser.name) >= 0) {
       return Promise.reject(`${newUser.name} already exist`);

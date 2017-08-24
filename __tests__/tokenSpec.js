@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import * as token from '../src/token';
+import bcrypt from 'bcrypt-nodejs';
 
 describe('token', () => {
   let clock = null;

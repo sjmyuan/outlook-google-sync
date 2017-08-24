@@ -20,6 +20,8 @@ import {
   verify,
 } from './token';
 
+import bcrypt from 'bcrypt-nodejs';
+
 module.exports.login = (event, context, cb) => {
   const bucket = _.get(event, 'stageVariables.home_bucket');
   const tokenKey = _.get(event, 'stageVariables.token_key');
@@ -171,7 +173,7 @@ module.exports.add_user = (event, context, cb) => {
 
   const userInfo = {
     name: newUser.name,
-    password: newUser.password,
+    password: bcrypt.hashSync(newUser.password),
     rooms: [],
     filters: [],
   };
@@ -219,7 +221,10 @@ module.exports.login_user = (event, context, cb) => {
 
   getUserInfo(newUser.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
     .then((data) => {
-      if (data.info.password !== newUser.password) { return Promise.reject('password is wrong'); }
+      console.log('user info:');
+      console.log(data);
+      console.log(`login password:${newUser.password}`);
+      if (!bcrypt.compareSync(newUser.password, data.info.password)) { return Promise.reject('password is wrong'); }
     }).then(() => sign(newUser.name, tokenKey))
     .then((token) => {
       cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ token }) });
