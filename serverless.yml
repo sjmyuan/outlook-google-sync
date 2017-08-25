@@ -3,6 +3,8 @@ service: outlook-google-sync
 custom:
   outlook_redirect_path: 'outlook/authorize'
   google_redirect_path: 'google/authorize'
+  outlook_login_path: 'outlook/login'
+  google_login_path: 'google/login'
   outlook_scope: 'openid,offline_access,Calendars.Read'
   google_scope: 'https://www.googleapis.com/auth/calendar'
   outlook_client_key: 'config/users/=USER=/client/outlook.json'
@@ -19,18 +21,28 @@ custom:
   outlook_client_secret: ''
   google_client_id: ''
   google_client_secret: ''
+  token_key: ''
+  email_address: ''
+  email_password: ''
   stageVariables:
     home_bucket: ${self:custom.home_bucket}
     attendees_key: ${self:custom.attendees_key}
     user_info_key: ${self:custom.user_info_key}
     google_client_key: ${self:custom.google_client_key}
+    google_token_key: ${self:custom.google_token_key}
     outlook_client_key: ${self:custom.outlook_client_key}
+    outlook_token_key: ${self:custom.outlook_token_key}
+    user_home_key: ${self:custom.user_home_key}
+    outlook_login_path: ${self:custom.outlook_login_path}
+    google_login_path: ${self:custom.google_login_path}
+    token_key: ${self:custom.token_key}
 
 provider:
   name: aws
-  runtime: nodejs4.3
-  stage: dev
+  runtime: nodejs6.10
+  stage: stg
   region: ap-northeast-2
+  timeout: 30
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -53,9 +65,20 @@ functions:
       client_key: ${self:custom.outlook_client_key}
     events:
       - http:
-          path: outlook/login
+          path: ${self:custom.outlook_login_path}
           method: get
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   outlookAuthorize:
     handler: app.authorize
@@ -67,7 +90,7 @@ functions:
       token_key: ${self:custom.outlook_token_key}
     events:
       - http:
-          path: outlook/authorize
+          path: ${self:custom.outlook_redirect_path}
           method: get
           cors: true
           private: false
@@ -80,9 +103,20 @@ functions:
       client_key: ${self:custom.google_client_key}
     events:
       - http:
-          path: google/login
+          path: ${self:custom.google_login_path}
           method: get
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   googleAuthorize:
     handler: app.authorize
@@ -94,7 +128,7 @@ functions:
       token_key: ${self:custom.google_token_key}
     events:
       - http:
-          path: google/authorize
+          path: ${self:custom.google_redirect_path}
           method: get
           cors: true
           private: false
@@ -105,7 +139,118 @@ functions:
       - http:
           path: add/attendee
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+          private: false
+  deleteAttendee:
+    handler: app.delete_attendee
+    timeout: 15
+    events:
+      - http:
+          path: delete/attendee
+          method: post
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+          private: false
+  userLogin:
+    handler: app.login_user
+    timeout: 15
+    events:
+      - http:
+          path: user/login
+          method: post
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+          private: false
+  getUserConfig:
+    handler: app.get_user_config
+    timeout: 15
+    events:
+      - http:
+          path: user/config
+          method: get
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+          private: false
+  saveUserConfig:
+    handler: app.save_user_config
+    timeout: 15
+    events:
+      - http:
+          path: user/config
+          method: post
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+          private: false
+  resetPassword:
+    handler: app.reset_password
+    timeout: 15
+    events:
+      - http:
+          path: user/password/reset
+          method: post
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   addUser:
     handler: app.add_user
@@ -119,7 +264,18 @@ functions:
       - http:
           path: add/user
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
           private: false
   refreshOutlookToken:
     handler: app.refresh_token 
@@ -150,6 +306,8 @@ functions:
       tgt_token_key: ${self:custom.google_token_key}
       attendees_key: ${self:custom.attendees_key}
       sync_days: ${self:custom.sync_days}
+      email_address: ${self:custom.email_address}
+      email_password: ${self:custom.email_password}
     events:
       - schedule: rate(60 minutes)
 resources:

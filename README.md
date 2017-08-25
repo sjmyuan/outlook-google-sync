@@ -15,12 +15,17 @@ This repo is used to synchronize events from Outlook to Gmail. it use OAuth2.0 t
 + Support ignoring events by subject
 + Support ordering rooms 
 + Support email group
++ Support send email when failed to book room
++ Support re-booking room for event whoes time was modified
 
 ## How to use
 1. Register user using /add/user
-2. Add involved attendees using /add/attendees
-3. Authenticate Outlook using /outlook/login?id=<user id>
-4. Authenticate Gmail using /google/login?id=<user id>
+2. Edit user configuration using /user/config
+    * Add involved attendees
+    * Authenticate Outlook
+    * Authenticate Gmail
+    * Add rooms
+    * Add ignored subject
 
 ## To do list
 + Add configuration ui
