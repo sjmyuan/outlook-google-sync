@@ -308,7 +308,9 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
             .then((events) => {
               const newEvents = _.filter(
                 events.value,
-                message => (_.findIndex(processedEvents, ele => ele.iCalUId === message.iCalUId) < 0
+                message => (_.findIndex(processedEvents, ele => ele.iCalUId === message.iCalUId
+                    && ele.start.dateTime === message.start.dateTime
+                    && ele.end.dateTime === message.end.dateTime) < 0
                   && _.findIndex(userInfo.filters, ele => ele === message.subject) < 0),
               );
               return {
