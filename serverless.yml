@@ -232,6 +232,26 @@ functions:
               - X-Amz-User-Agent
             allowCredentials: false
           private: false
+  resetPassword:
+    handler: app.reset_password
+    timeout: 15
+    events:
+      - http:
+          path: user/password/reset
+          method: post
+          cors:
+            origins:
+              - '*'
+            headers:
+              - email-token
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+          private: false
   addUser:
     handler: app.add_user
     timeout: 15

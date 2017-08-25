@@ -324,3 +324,48 @@ module.exports.save_user_config = (event, context, cb) => {
     cb(null, { statusCode: 401 });
   });
 };
+
+module.exports.reset_password = (event, context, cb) => {
+  console.log(event);
+  const resetData = JSON.parse(event.body);
+  if (!_.has(resetData, 'oldPassword')) {
+    cb(null, { statusCode: 400, body: 'can not find old password' });
+    console.log('can not find old password');
+    return false;
+  }
+
+  if (!_.has(resetData, 'newPassword')) {
+    cb(null, { statusCode: 400, body: 'can not find new password' });
+    console.log('can not find new password');
+    return false;
+  }
+
+  if (!_.has(resetData, 'name')) {
+    cb(null, { statusCode: 400, body: 'can not find name' });
+    console.log('can not find name');
+    return false;
+  }
+
+  const bucket = _.get(event, 'stageVariables.home_bucket');
+  const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
+  const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
+  const googleTokenKeyTpl = _.get(event, 'stageVariables.google_token_key');
+  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
+
+  getUserInfo(resetData.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
+    .then((data) => {
+      console.log('user info:');
+      console.log(data);
+      const userInfo = data.info;
+      if (!_.has(userInfo, 'password') || bcrypt.compareSync(resetData.oldPassword, userInfo.password)) {
+        userInfo.password = bcrypt.hashSync(resetData.newPassword);
+        return saveUserBasicInfo(userInfo, bucket, userInfoKeyTpl).then(() => {
+          cb(null, { statusCode: 200, body: JSON.stringify('success') });
+        });
+      }
+      cb(null, { statusCode: 401 });
+      return '';
+    }).catch((err) => {
+      cb(null, { statusCode: 500, body: JSON.stringify(err) });
+    });
+};
