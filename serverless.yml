@@ -1,6 +1,9 @@
 service: outlook-google-sync
 
 custom:
+  host_zone: ''
+  custom_domain: ''
+  certificate_arn: ''
   outlook_redirect_path: 'outlook/authorize'
   google_redirect_path: 'google/authorize'
   outlook_login_path: 'outlook/login'
@@ -316,6 +319,32 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.home_bucket}
+    myDomainName:
+      Type: AWS::ApiGateway::DomainName
+      Properties:
+        CertificateArn: ${self:custom.certificate_arn}
+        DomainName: ${self:custom.custom_domain}
+    myMapping:
+      Type: AWS::ApiGateway::BasePathMapping
+      Properties:
+        BasePath: ${self:provider.stage}
+        DomainName:
+          Ref: myDomainName
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        Stage: ${self:provider.stage}
+    myDNSRecord:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneName: ${self:custom.host_zone}
+        Comment: DNS name for ebot.
+        Name: ${self:custom.custom_domain}
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+          - Fn::GetAtt:
+            - myDomainName
+            - DistributionDomainName
 plugins:
   - serverless-webpack
   - serverless-plugin-stage-variables
