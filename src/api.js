@@ -8,6 +8,7 @@ import nodemailer from 'nodemailer';
 const oauth = require('simple-oauth2');
 
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
+import { lazySequence } from './promiseOps';
 
 const getQueueUrl = queueName => new Promise((resolve, reject) => {
   const sqs = new AWS.SQS();
@@ -357,30 +358,33 @@ const sendNoRoomEmail = (server, event, allAttendees) => {
   return sendEmail(server, options);
 };
 
+const processMessage = (server, message, attendees) => getAvailableRoom(message.info.rooms,
+    message.event.start,
+    message.event.end,
+    message.token.token.access_token,
+  ).then(room =>
+      createGoogleEvent(
+        convertOutlookToGoogle(attendees, message.event, room),
+        message.token.token.access_token,
+      )).catch(() => {
+        sendNoRoomEmail(server, message.event, attendees).catch((err) => {
+          console.log('Fialed to send email');
+          console.log(server);
+          console.log(message.event);
+          console.log(err);
+        });
+      });
+
 const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey, server) =>
   writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
     .then(() => readObjectFromS3(bucket, attendeesKey)
         .catch(() => Promise.resolve([]))
-        .then(attendees => Promise.all(
-        _.map(
-          totalEvents.validEvents,
-          message => getAvailableRoom(message.info.rooms,
-            message.event.start,
-            message.event.end,
-            message.token.token.access_token,
-          ).then(room =>
-              createGoogleEvent(
-                convertOutlookToGoogle(attendees, message.event, room),
-                message.token.token.access_token,
-              )).catch(() => {
-                sendNoRoomEmail(server, message.event, attendees).catch((err) => {
-                  console.log('Fialed to send email');
-                  console.log(server);
-                  console.log(message.event);
-                  console.log(err);
-                });
-              }),
-        ))));
+        .then(attendees =>
+          _.reduce(totalEvents.validEvents,
+            (sum, message) => sum.then(() => processMessage(server, message, attendees)),
+            Promise.resolve('start')),
+        ),
+    );
 
 const syncEvents = (bucket,
   processedEventsKey,
