@@ -315,6 +315,48 @@ functions:
       - schedule: rate(60 minutes)
 resources:
   Resources:
+    OutlookLoginLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    OutlookAuthorizeLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    GoogleLoginLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    GoogleAuthorizeLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    AddAttendeeLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    DeleteAttendeeLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    UserLoginLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    GetUserConfigLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    SaveUserConfigLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    ResetPasswordLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    AddUserLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    RefreshOutlookTokenLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    RefreshGoogleTokenLogGroup:
+      Properties:
+        RetentionInDays: "1"
+    SyncEventsLogGroup:
+      Properties:
+        RetentionInDays: "1"
     HomeS3Bucket:
       Type: AWS::S3::Bucket
       Properties:
