@@ -282,6 +282,12 @@ const addAttendees = (newAttendees, bucket, attendeesKey) =>
     return writeObjectToS3(bucket, attendeesKey, allAttendees);
   });
 
+const updateAttendees = (newAttendees, bucket, attendeesKey) => {
+  console.log('New attendees are ');
+  console.log(newAttendees);
+  return writeObjectToS3(bucket, attendeesKey, newAttendees);
+};
+
 const deleteAttendees = (attendees, bucket, attendeesKey) =>
   readObjectFromS3(bucket, attendeesKey)
   .catch(() => Promise.resolve([]))
@@ -495,6 +501,7 @@ export { sendTopic,
   listFoldersInS3,
   addUser,
   addAttendees,
+  updateAttendees,
   deleteAttendees,
   syncEvents,
   refreshTokens,

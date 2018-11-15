@@ -6,6 +6,7 @@ import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import {
   addUser,
   addAttendees,
+  updateAttendees,
   deleteAttendees,
   syncEvents,
   refreshTokens,
@@ -313,7 +314,7 @@ module.exports.save_user_config = (event, context, cb) => {
 
         return Promise.all([
           saveUserBasicInfo(userInfo, bucket, userInfoKeyTpl),
-          addAttendees(data.attendees, bucket, attendeesKey),
+          updateAttendees(data.attendees, bucket, attendeesKey),
         ]);
       }).then(() => {
         cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'success' });
