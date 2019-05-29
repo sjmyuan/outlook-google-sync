@@ -83,60 +83,6 @@ describe('api', () => {
     });
   });
 
-  describe('addAttendees', () => {
-    let getObjectReuslt = null;
-    let putObjectResult = null;
-    const getObject = sinon.stub().returns(
-      {
-        promise: () => getObjectReuslt,
-      },
-    );
-    const putObject = sinon.stub().returns(
-      {
-        promise: () => putObjectResult,
-      },
-    );
-    beforeEach(() => {
-      sinon.stub(AWS, 'S3').returns(
-        {
-          getObject,
-          putObject,
-        },
-      );
-    });
-    afterEach(() => {
-      AWS.S3.restore();
-    });
-    describe('No attendees file in s3', () => {
-      it('should return the empty array', () => {
-        const newAttendees = require('./fixtures/attendees.json');
-        getObjectReuslt = Promise.reject('no file');
-        putObjectResult = Promise.resolve('success');
-        const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
-        return expect(result).eventually.to.equal('success');
-      });
-    });
-    describe('All duplicated attendees in s3', () => {
-      it('should return the same attendees', () => {
-        const newAttendees = require('./fixtures/attendees.json');
-        getObjectReuslt = Promise.resolve({ Body: JSON.stringify(newAttendees) });
-        putObjectResult = Promise.resolve('success');
-        const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
-        return expect(result).eventually.to.equal('success');
-      });
-    });
-    describe('Partial duplicated attendees in s3', () => {
-      it('should return the merged attendees', () => {
-        const newAttendees = require('./fixtures/attendees.json');
-        const oldAttendees = [{ outlook: 'outlook', google: 'google' }];
-        getObjectReuslt = Promise.resolve({ Body: JSON.stringify(oldAttendees) });
-        putObjectResult = Promise.resolve('success');
-        const result = api.addAttendees(newAttendees, 'bucket', 'config/attendees.json');
-        return expect(result).eventually.to.equal('success');
-      });
-    });
-  });
-
   describe('addUser', () => {
     const putObject = sinon.stub().returns({
       promise: () => Promise.resolve('success'),

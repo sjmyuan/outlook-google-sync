@@ -109,7 +109,7 @@ const getAvailableRoom = (rooms, start, end, token) => {
   return rp(option).then((data) => {
     console.log('free busy data is ');
     console.log(data);
-    const availableRoom = _.find(rooms, room => _.isEmpty(data.calendars[room.id].busy));
+    const availableRoom = rooms.find(room => _.isEmpty(data.calendars[room.id].busy));
     if (_.isUndefined(availableRoom)) {
       return Promise.reject('There is no available room');
     }
@@ -154,7 +154,7 @@ const listFoldersInS3 = (bucket, prefix) => {
     Delimiter: '/',
     Prefix: prefix,
   };
-  return s3.listObjects(params).promise().then(data => _.map(data.CommonPrefixes, ele => ele.Prefix.replace(prefix, '').replace(/\/$/g, '')));
+  return s3.listObjects(params).promise().then(data => data.CommonPrefixes.map(ele => ele.Prefix.replace(prefix, '').replace(/\/$/g, '')));
 };
 
 const fillInUser = (tpl, user) => tpl.replace(/=USER=/g, user);
@@ -185,7 +185,7 @@ const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTp
   };
 
   return listFoldersInS3(bucket, userHomeKey).then((users) => {
-    if (_.findIndex(users, ele => ele === newUser.name) >= 0) {
+    if (users.findIndex(ele => ele === newUser.name) >= 0) {
       return Promise.reject(`${newUser.name} already exist`);
     }
   }).then(() => Promise.all([
@@ -195,38 +195,14 @@ const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTp
   ]));
 };
 
-const addAttendees = (newAttendees, bucket, attendeesKey) =>
-  readObjectFromS3(bucket, attendeesKey)
-  .catch(() => Promise.resolve([]))
-  .then((oldAttendees) => {
-    console.log('Old attendees is ');
-    console.log(oldAttendees);
-    const allAttendees = _.uniqBy([...oldAttendees, ...newAttendees], ele => ele.outlook);
-    console.log('All attendees is ');
-    console.log(allAttendees);
-    return writeObjectToS3(bucket, attendeesKey, allAttendees);
-  });
-
 const updateAttendees = (newAttendees, bucket, attendeesKey) => {
   console.log('New attendees are ');
   console.log(newAttendees);
   return writeObjectToS3(bucket, attendeesKey, newAttendees);
 };
 
-const deleteAttendees = (attendees, bucket, attendeesKey) =>
-  readObjectFromS3(bucket, attendeesKey)
-  .catch(() => Promise.resolve([]))
-  .then((oldAttendees) => {
-    console.log('Old attendees is ');
-    console.log(oldAttendees);
-    const allAttendees = _.differenceBy(oldAttendees, attendees, ele => ele.outlook);
-    console.log('All attendees is ');
-    console.log(allAttendees);
-    return writeObjectToS3(bucket, attendeesKey, allAttendees);
-  });
-
 const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKeyTpl, users, processedEvents, syncDays) =>
-  Promise.all(_.map(users, (user) => {
+  Promise.all(users.map((user) => {
     const srcTokenKey = fillInUser(srcTokenKeyTpl, user);
     const tgtTokenKey = fillInUser(tgtTokenKeyTpl, user);
     const userInfoKey = fillInUser(userInfoKeyTpl, user);
@@ -238,15 +214,14 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
       const [srcToken, tgtToken, userInfo] = tokenAndInfo;
       return fetchOutlookEvents(srcToken.token.access_token, syncDays)
             .then((events) => {
-              const newEvents = _.filter(
-                events.value,
-                message => (_.findIndex(processedEvents, ele => ele.iCalUId === message.iCalUId
+              const newEvents = events.value.filter(
+                message => (processedEvents.findIndex(ele => ele.iCalUId === message.iCalUId
                     && ele.start.dateTime === message.start.dateTime
                     && ele.end.dateTime === message.end.dateTime) < 0
-                  && _.findIndex(userInfo.filters, ele => ele === message.subject) < 0),
+                  && userInfo.filters.findIndex(ele => ele === message.subject) < 0),
               );
               return {
-                validEvents: _.map(newEvents, ele => ({
+                validEvents: newEvents.map(ele => ({
                   id: ele.iCalUId,
                   info: userInfo,
                   token: tgtToken,
@@ -279,7 +254,7 @@ const sendEmail = (server, options) => new Promise((resolve, reject) => {
 
 const sendNoRoomEmail = (server, event, allAttendees) => {
   const validAttendees = mapAttendees(allAttendees, event.attendees);
-  const targetEmails = _.reduce(validAttendees, (acc, item) => `${item.email},${acc}`, '');
+  const targetEmails = validAttendees.reduce((acc, item) => `${item.email},${acc}`, '');
   const options = {
     from: server.user,
     to: targetEmails,
@@ -311,8 +286,7 @@ const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendee
     .then(() => readObjectFromS3(bucket, attendeesKey)
         .catch(() => Promise.resolve([]))
         .then(attendees =>
-          _.reduce(totalEvents.validEvents,
-            (sum, message) => sum.then(() => processMessage(server, message, attendees)),
+          totalEvents.validEvents.reduce((sum, message) => sum.then(() => processMessage(server, message, attendees)),
             Promise.resolve('start')),
         ),
     );
@@ -341,7 +315,7 @@ const syncEvents = (bucket,
   }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKey, emailServer));
 
 const refreshTokens = (bucket, userHomeKey, clientKeyTpl, tokenKeyTpl) => listFoldersInS3(bucket, userHomeKey)
-    .then(users => Promise.all(_.map(users, (user) => {
+    .then(users => Promise.all(users.map((user) => {
       const clientKey = fillInUser(clientKeyTpl, user);
       const tokenKey = fillInUser(tokenKeyTpl, user);
       console.log(`user is ${user}`);
@@ -418,9 +392,7 @@ export { fetchOutlookEvents,
   writeObjectToS3,
   listFoldersInS3,
   addUser,
-  addAttendees,
   updateAttendees,
-  deleteAttendees,
   syncEvents,
   refreshTokens,
   authorize,
