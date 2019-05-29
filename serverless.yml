@@ -42,7 +42,7 @@ custom:
 
 provider:
   name: aws
-  runtime: nodejs6.10
+  runtime: nodejs10.x
   stage: stg
   region: ap-northeast-2
   timeout: 30
@@ -134,46 +134,6 @@ functions:
           path: ${self:custom.google_redirect_path}
           method: get
           cors: true
-          private: false
-  addAttendee:
-    handler: app.add_attendee
-    timeout: 15
-    events:
-      - http:
-          path: add/attendee
-          method: post
-          cors:
-            origins:
-              - '*'
-            headers:
-              - email-token
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-            allowCredentials: false
-          private: false
-  deleteAttendee:
-    handler: app.delete_attendee
-    timeout: 15
-    events:
-      - http:
-          path: delete/attendee
-          method: post
-          cors:
-            origins:
-              - '*'
-            headers:
-              - email-token
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-            allowCredentials: false
           private: false
   userLogin:
     handler: app.login_user

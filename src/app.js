@@ -5,9 +5,7 @@ const oauth = require('simple-oauth2');
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import {
   addUser,
-  addAttendees,
   updateAttendees,
-  deleteAttendees,
   syncEvents,
   refreshTokens,
   authorize,
@@ -111,47 +109,6 @@ module.exports.sync_events = (event) => {
   }).catch((err) => {
     console.log(`Failed to sync events, error message is ${err}`);
   });
-};
-
-module.exports.add_attendee = (event, context, cb) => {
-  const bucket = _.get(event, 'stageVariables.home_bucket');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
-  const newAttendees = JSON.parse(event.body);
-  if (_.isNull(newAttendees)) {
-    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
-    console.log('Request body is null');
-    return false;
-  }
-  console.log(`New attendees is ${newAttendees}`);
-  addAttendees(newAttendees, bucket, attendeesKey)
-      .then(() => {
-        cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add attendees' });
-        console.log('Success to add attendee');
-      }).catch((err) => {
-        cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
-        console.log(`Failed to add attendee, error message is ${err}`);
-      });
-};
-
-module.exports.delete_attendee = (event, context, cb) => {
-  const bucket = _.get(event, 'stageVariables.home_bucket');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
-  const attendees = JSON.parse(event.body);
-  if (_.isNull(attendees)) {
-    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
-    console.log('Request body is null');
-    return false;
-  }
-  console.log('Delete attendees is:');
-  console.log(attendees);
-  deleteAttendees(attendees, bucket, attendeesKey)
-      .then(() => {
-        cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add attendees' });
-        console.log('Success to delete attendee');
-      }).catch((err) => {
-        cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
-        console.log(`Failed to delete attendee, error message is ${err}`);
-      });
 };
 
 module.exports.add_user = (event, context, cb) => {
