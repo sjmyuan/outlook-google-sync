@@ -5,68 +5,10 @@ import uuid from 'node-uuid';
 import moment from 'moment-timezone';
 import nodemailer from 'nodemailer';
 
-const oauth = require('simple-oauth2');
-
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import { lazySequence } from './promiseOps';
 
-const getQueueUrl = queueName => new Promise((resolve, reject) => {
-  const sqs = new AWS.SQS();
-  sqs.getQueueUrl({ QueueName: queueName }, (err, data) => {
-    if (err) {
-      reject(err);
-    } else {
-      resolve(data.QueueUrl);
-    }
-  });
-});
-
-const fetchMessage = queueName =>
-  getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
-    const sqs = new AWS.SQS();
-    sqs.receiveMessage({ QueueUrl: url }, (err, data) => {
-      if (err) reject(err);
-      else resolve(data);
-    });
-  }));
-
-const sendMessage = (queueName, message) => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
-  const sqs = new AWS.SQS();
-  sqs.sendMessage({ QueueUrl: url, MessageBody: message }, (err, data) => {
-    if (err) reject(err);
-    else resolve(data);
-  });
-}));
-
-const purgeQueue = queueName => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
-  const sqs = new AWS.SQS();
-  sqs.purgeQueue({ QueueUrl: url }, (err, data) => {
-    if (err) reject(err);
-    else resolve(data);
-  });
-}));
-
-const deleteMessages = (queueName, messages) => getQueueUrl(queueName).then(url => new Promise((resolve, reject) => {
-  const sqs = new AWS.SQS();
-  if (_.isEmpty(messages)) {
-    resolve('success');
-  } else {
-    const entries = _.map(messages, message => ({ Id: message.MessageId, ReceiptHandle: message.ReceiptHandle }));
-    console.log(entries);
-    sqs.deleteMessageBatch({ QueueUrl: url, Entries: entries }, (err, data) => {
-      if (err) reject(err);
-      else resolve(data);
-    });
-  }
-}));
-
-const sendTopic = (topicArn, message) => new Promise((resolve, reject) => {
-  const sns = new AWS.SNS();
-  sns.publish({ TopicArn: topicArn, Message: message }, (err, data) => {
-    if (err) reject(err);
-    else resolve(data);
-  });
-});
+const oauth = require('simple-oauth2');
 
 const fetchOutlookEvents = (token, days) => {
   const startDate = new Date();
@@ -93,32 +35,15 @@ const fetchOutlookEvents = (token, days) => {
   });
 };
 
-const fetchGoogleEvents = (token, days) => {
-  const startDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
-  console.log(`start date is ${startDate.toISOString()}`);
-  const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
-  console.log(`end date is ${endDate.toISOString()}`);
-  const uri = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}&singleEvents=true`;
-  console.log(`uri is ${uri}`);
-  const option = {
-    method: 'GET',
-    uri,
-    headers: {
-      authorization: `Bearer ${token}`,
-    },
-    json: true,
-  };
-  return rp(option);
-};
-
-const mapAttendees = (allAttendees, eventAttendees) => _.reduce(eventAttendees, (collect, attendee) => {
-  const info = _.find(allAttendees, ele => ele.outlook === attendee.emailAddress.address);
+// [{email:example@gmail.com},.....]
+const mapAttendees = (allAttendees, eventAttendees) => eventAttendees.reduce((collect, attendee) => {
+  const info = allAttendees.find(ele => ele.outlook === attendee.emailAddress.address);
   if (_.isUndefined(info)) {
     return collect;
   }
 
   if (_.isArray(info.google)) {
-    return [...collect, ..._.map(info.google, ele => ({ email: ele }))];
+    return [...collect, ...(info.google.map(ele => ({ email: ele })))];
   }
 
   return [...collect, { email: info.google }];
@@ -485,14 +410,7 @@ const getUserInfo = (user,
   });
 };
 
-export { sendTopic,
-  sendMessage,
-  fetchMessage,
-  getQueueUrl,
-  purgeQueue,
-  fetchOutlookEvents,
-  fetchGoogleEvents,
-  deleteMessages,
+export { fetchOutlookEvents,
   convertOutlookToGoogle,
   createGoogleEvent,
   getAvailableRoom,
@@ -510,4 +428,5 @@ export { sendTopic,
   fillInUser,
   getUserInfo,
   saveUserBasicInfo,
+  mapAttendees,
 };

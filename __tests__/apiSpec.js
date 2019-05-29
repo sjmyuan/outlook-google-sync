@@ -190,4 +190,19 @@ describe('api', () => {
       expect(result).eventually.to.deep.equal(['success', 'success', 'success']);
     });
   });
+
+  describe('mapAttendees', () => {
+    it('should return the corresponding gmail of outlook when there is only one gmail', () => {
+      const allAttendees = [{ outlook: 'a@outlook', google: 'a@google' }, { outlook: 'b@outlook', google: 'b@google' }];
+      const attendes = [{ emailAddress: { address: 'a@outlook' } }, { emailAddress: { address: 'b@outlook' } }];
+      const result = api.mapAttendees(allAttendees, attendes);
+      expect(result).to.deep.equal([{ email: 'a@google' }, { email: 'b@google' }]);
+    });
+    it('should return the corresponding gmail of outlook when there are multiple gmails', () => {
+      const allAttendees = [{ outlook: 'a@outlook', google: ['a1@google', 'a2@google'] }, { outlook: 'b@outlook', google: 'b@google' }];
+      const attendes = [{ emailAddress: { address: 'a@outlook' } }, { emailAddress: { address: 'b@outlook' } }];
+      const result = api.mapAttendees(allAttendees, attendes);
+      expect(result).to.deep.equal([{ email: 'a1@google' }, { email: 'a2@google' }, { email: 'b@google' }]);
+    });
+  });
 });
