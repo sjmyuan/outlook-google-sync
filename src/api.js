@@ -195,7 +195,8 @@ const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTp
   ]));
 };
 
-const updateAttendees = (newAttendees, bucket, attendeesKey) => {
+const updateAttendees = (newAttendees, bucket, attendeesKeyTpl, user) => {
+  const attendeesKey = fillInUser(attendeesKeyTpl, user)
   console.log('New attendees are ');
   console.log(newAttendees);
   return writeObjectToS3(bucket, attendeesKey, newAttendees);
@@ -281,15 +282,12 @@ const processMessage = (server, message, attendees) => getAvailableRoom(message.
         });
       });
 
-const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKey, server) =>
+const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKeyTpl, server) =>
   writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
-    .then(() => readObjectFromS3(bucket, attendeesKey)
-        .catch(() => Promise.resolve([]))
-        .then(attendees =>
-          totalEvents.validEvents.reduce((sum, message) => sum.then(() => processMessage(server, message, attendees)),
-            Promise.resolve('start')),
-        ),
-    );
+    .then(() => totalEvents.validEvents.reduce((sum, message) => sum.then(() => {
+      const attendeesKey = fillInUser(attendeesKeyTpl, message.info.name);
+      readObjectFromS3(bucket, attendeesKey).catch(() => Promise.resolve([])).then(attendees => processMessage(server, message, attendees));
+    }), Promise.resolve('start')));
 
 const syncEvents = (bucket,
   processedEventsKey,
@@ -298,7 +296,7 @@ const syncEvents = (bucket,
   srcTokenKeyTpl,
   tgtTokenKeyTpl,
   syncDays,
-  attendeesKey,
+  attendeesKeyTpl,
   emailServer) => Promise.all([
     listFoldersInS3(bucket, userHomeKey),
     readObjectFromS3(bucket, processedEventsKey).catch(() => Promise.resolve([])),
@@ -312,7 +310,7 @@ const syncEvents = (bucket,
       users,
       processedEvents,
       syncDays);
-  }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKey, emailServer));
+  }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKeyTpl, emailServer));
 
 const refreshTokens = (bucket, userHomeKey, clientKeyTpl, tokenKeyTpl) => listFoldersInS3(bucket, userHomeKey)
     .then(users => Promise.all(users.map((user) => {
@@ -359,10 +357,11 @@ const getUserInfo = (user,
   userInfoKeyTpl,
   googleTokenKeyTpl,
   outlookTokenKeyTpl,
-  attendeesKey,
+  attendeesKeyTpl,
   googleLoginUrl,
   outlookLoginUrl) => {
   const userInfoKey = fillInUser(userInfoKeyTpl, user);
+  const attendeesKey = fillInUser(attendeesKeyTpl, user);
   const googleTokenKey = fillInUser(googleTokenKeyTpl, user);
   const outlookTokenKey = fillInUser(outlookTokenKeyTpl, user);
 

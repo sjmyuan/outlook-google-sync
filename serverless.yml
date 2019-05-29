@@ -15,7 +15,7 @@ custom:
   google_client_key: 'config/users/=USER=/client/google.json'
   google_token_key: 'config/users/=USER=/token/google.json'
   user_info_key: 'config/users/=USER=/info.json'
-  attendees_key: 'config/attendees.json'
+  attendees_key: 'config/users/=USER=/attendees.json'
   processed_events_key: 'cache/events.json'
   user_home_key: 'config/users/'
   sync_days: 14
@@ -241,7 +241,7 @@ functions:
             allowCredentials: false
           private: false
   refreshOutlookToken:
-    handler: app.refresh_token 
+    handler: app.refresh_token
     environment:
       home_bucket: ${self:custom.home_bucket}
       user_home_key: ${self:custom.user_home_key}
@@ -250,7 +250,7 @@ functions:
     events:
       - schedule: rate(30 minutes)
   refreshGoogleToken:
-    handler: app.refresh_token 
+    handler: app.refresh_token
     environment:
       home_bucket: ${self:custom.home_bucket}
       user_home_key: ${self:custom.user_home_key}
