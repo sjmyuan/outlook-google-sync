@@ -287,19 +287,19 @@ module.exports.reset_password = (event, context, cb) => {
   console.log(event);
   const resetData = JSON.parse(event.body);
   if (!_.has(resetData, 'oldPassword')) {
-    cb(null, { statusCode: 400, body: 'can not find old password' });
+    cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find old password' });
     console.log('can not find old password');
     return false;
   }
 
   if (!_.has(resetData, 'newPassword')) {
-    cb(null, { statusCode: 400, body: 'can not find new password' });
+    cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find new password' });
     console.log('can not find new password');
     return false;
   }
 
   if (!_.has(resetData, 'name')) {
-    cb(null, { statusCode: 400, body: 'can not find name' });
+    cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find name' });
     console.log('can not find name');
     return false;
   }
@@ -318,12 +318,12 @@ module.exports.reset_password = (event, context, cb) => {
       if (!_.has(userInfo, 'password') || bcrypt.compareSync(resetData.oldPassword, userInfo.password)) {
         userInfo.password = bcrypt.hashSync(resetData.newPassword);
         return saveUserBasicInfo(userInfo, bucket, userInfoKeyTpl).then(() => {
-          cb(null, { statusCode: 200, body: JSON.stringify('success') });
+          cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify('success') });
         });
       }
       cb(null, { statusCode: 401 });
       return '';
     }).catch((err) => {
-      cb(null, { statusCode: 500, body: JSON.stringify(err) });
+      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
     });
 };
