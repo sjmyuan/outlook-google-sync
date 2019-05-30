@@ -287,12 +287,6 @@ resources:
     GoogleAuthorizeLogGroup:
       Properties:
         RetentionInDays: "1"
-    AddAttendeeLogGroup:
-      Properties:
-        RetentionInDays: "1"
-    DeleteAttendeeLogGroup:
-      Properties:
-        RetentionInDays: "1"
     UserLoginLogGroup:
       Properties:
         RetentionInDays: "1"

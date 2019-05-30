@@ -287,7 +287,7 @@ const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendee
   writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
     .then(() => totalEvents.validEvents.reduce((sum, message) => sum.then(() => {
       const attendeesKey = fillInUser(attendeesKeyTpl, message.info.name);
-      readObjectFromS3(bucket, attendeesKey).catch(() => Promise.resolve([])).then(attendees => processMessage(server, message, attendees));
+      return readObjectFromS3(bucket, attendeesKey).catch(() => Promise.resolve([])).then(attendees => processMessage(server, message, attendees));
     }), Promise.resolve('start')));
 
 const syncEvents = (bucket,
