@@ -60,6 +60,7 @@ const convertOutlookToGoogle = (attendees, event, room) => {
     end: event.end,
     recurrence: [],
     attendees: validAttendees,
+    guestsCanModify: true,
     reminders: {
       useDefault: false,
       overrides: [
