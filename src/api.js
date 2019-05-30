@@ -232,7 +232,7 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
                 allEvents: events.value,
               };
             });
-    }).catch(() => ({ validEvents: [], allEvents: [] }));
+    }).catch(() => ({ validEvents: [], allEvents: processedEvents }));
   })).then(events => ({
     validEvents: _.uniqBy(_.flatMap(events, ele => ele.validEvents), ele => ele.id),
     allEvents: _.uniqBy(_.flatMap(events, ele => ele.allEvents), ele => ele.iCalUId),
