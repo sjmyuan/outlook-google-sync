@@ -17,6 +17,7 @@ custom:
   user_info_key: 'config/users/=USER=/info.json'
   attendees_key: 'config/users/=USER=/attendees.json'
   processed_events_key: 'cache/events.json'
+  created_events_key: 'cache/createdEvents.json'
   user_home_key: 'config/users/'
   sync_days: 14
   home_bucket: 'outlook-google-sync-stg'
@@ -268,6 +269,7 @@ functions:
       src_token_key: ${self:custom.outlook_token_key}
       tgt_token_key: ${self:custom.google_token_key}
       attendees_key: ${self:custom.attendees_key}
+      created_events_key: ${self:custom.created_events_key}
       sync_days: ${self:custom.sync_days}
       email_address: ${self:custom.email_address}
       email_password: ${self:custom.email_password}

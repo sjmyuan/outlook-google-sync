@@ -2,7 +2,6 @@ import _ from 'lodash';
 
 const oauth = require('simple-oauth2');
 
-import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import {
   addUser,
   updateAttendees,
@@ -88,6 +87,7 @@ module.exports.sync_events = (event) => {
   const tgtTokenKeyTpl = process.env.tgt_token_key;
   const syncDays = process.env.sync_days;
   const attendeesKeyTpl = process.env.attendees_key;
+  const createdEventsKey = process.env.created_events_key;
   const emailAddress = process.env.email_address;
   const emailPassword = process.env.email_password;
   const emailServer = {
@@ -103,6 +103,7 @@ module.exports.sync_events = (event) => {
     tgtTokenKeyTpl,
     syncDays,
     attendeesKeyTpl,
+    createdEventsKey,
     emailServer,
   ).then(() => {
     console.log('Success to sync events');

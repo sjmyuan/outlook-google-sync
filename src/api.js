@@ -6,7 +6,6 @@ import moment from 'moment-timezone';
 import nodemailer from 'nodemailer';
 
 import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
-import { lazySequence } from './promiseOps';
 
 const oauth = require('simple-oauth2');
 
@@ -81,6 +80,20 @@ const createGoogleEvent = (event, token) => {
     },
     json: true,
     body: event,
+  };
+  return rp(option);
+};
+
+const deleteGoogleEvent = (eventId, token) => {
+  const uri = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}?sendUpdates=all`;
+  console.log(`uri is ${uri}`);
+  const option = {
+    method: 'DELETE',
+    uri,
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    json: true,
   };
   return rp(option);
 };
@@ -197,7 +210,7 @@ const addUser = (newUser, bucket, userHomeKey, userInfoKeyTpl, googleClientKeyTp
 };
 
 const updateAttendees = (newAttendees, bucket, attendeesKeyTpl, user) => {
-  const attendeesKey = fillInUser(attendeesKeyTpl, user)
+  const attendeesKey = fillInUser(attendeesKeyTpl, user);
   console.log('New attendees are ');
   console.log(newAttendees);
   return writeObjectToS3(bucket, attendeesKey, newAttendees);
@@ -218,9 +231,9 @@ const fetchAllValidEvents = (bucket, srcTokenKeyTpl, tgtTokenKeyTpl, userInfoKey
             .then((events) => {
               const newEvents = events.value.filter(
                 message => (processedEvents.findIndex(ele => ele.iCalUId === message.iCalUId
-                    && ele.start.dateTime === message.start.dateTime
-                    && ele.end.dateTime === message.end.dateTime) < 0
-                  && userInfo.filters.findIndex(ele => ele === message.subject) < 0),
+                  && ele.start.dateTime === message.start.dateTime
+                  && ele.end.dateTime === message.end.dateTime
+                  && ele.isCancelled === message.isCancelled) < 0),
               );
               return {
                 validEvents: newEvents.map(ele => ({
@@ -266,29 +279,53 @@ const sendNoRoomEmail = (server, event, allAttendees) => {
   return sendEmail(server, options);
 };
 
-const processMessage = (server, message, attendees) => getAvailableRoom(message.info.rooms,
-    message.event.start,
-    message.event.end,
-    message.token.token.access_token,
-  ).then(room =>
+const recordCreatedEvent = (bucket, createdEventKey, processedEvents, googleEvents) => {
+  const createdEvents = googleEvents.filter(googleEvent =>
+    processedEvents.findIndex((processedEvent => processedEvent.iCalUId === googleEvent.outlookEventId)) >= 0)
+  return writeObjectToS3(bucket, createdEventKey, createdEvents);
+};
+
+const processCreateMessage = (server, message, attendees) =>
+    getAvailableRoom(message.info.rooms,
+      message.event.start,
+      message.event.end,
+      message.token.token.access_token,
+    )
+    .then(room =>
       createGoogleEvent(
         convertOutlookToGoogle(attendees, message.event, room),
         message.token.token.access_token,
-      )).catch(() => {
-        sendNoRoomEmail(server, message.event, attendees).catch((err) => {
+      ).then(response =>
+        ([{ outlookEventId: message.event.iCalUId, user: message.info.name, googleEventId: response.id }])),
+    )
+    .catch(() => {
+      sendNoRoomEmail(server, message.event, attendees)
+        .catch((err) => {
           console.log('Fialed to send email');
           console.log(server);
           console.log(message.event);
           console.log(err);
-        });
-      });
+        }).finally(() => []);
+    });
 
-const processAllValidEvents = (bucket, processedEventsKey, totalEvents, attendeesKeyTpl, server) =>
+const processAllValidEvents = (bucket, tgtTokenKeyTpl, createdEventsKey, processedEventsKey, totalEvents, attendeesKeyTpl, server) =>
   writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
-    .then(() => totalEvents.validEvents.reduce((sum, message) => sum.then(() => {
-      const attendeesKey = fillInUser(attendeesKeyTpl, message.info.name);
-      return readObjectFromS3(bucket, attendeesKey).catch(() => Promise.resolve([])).then(attendees => processMessage(server, message, attendees));
-    }), Promise.resolve('start')));
+    .then(() => {
+      const createdEvents = readObjectFromS3(bucket, createdEventsKey).catch(() => []);
+      const deleteOperation = Promise.all(totalEvents.validEvents
+        .filter(event => event.ele.isCancelled && createdEvents.findIndex(createdEvent => event.id === createdEvent.outlookEventId) >= 0)
+        .map(event =>
+          readObjectFromS3(bucket, fillInUser(tgtTokenKeyTpl, event.info.name))
+            .then(tgtToken => deleteGoogleEvent(createdEvents.find(e => e.outlookEventId === event.id).googleEventId, tgtToken))));
+      const createOperation = Promise.all(
+        totalEvents.validEvents.filter(event => !event.ele.isCancelled).map(event =>
+        readObjectFromS3(bucket, fillInUser(attendeesKeyTpl, event.info.name))
+          .catch(() => Promise.resolve([]))
+          .then(attendees =>
+            processCreateMessage(server, event, attendees))))
+        .then(processedGoogleEvents => recordCreatedEvent(bucket, createdEventsKey, totalEvents.allEvents, processedGoogleEvents.flat(1)));
+      return deleteOperation.then(() => createOperation);
+    });
 
 const syncEvents = (bucket,
   processedEventsKey,
@@ -298,6 +335,7 @@ const syncEvents = (bucket,
   tgtTokenKeyTpl,
   syncDays,
   attendeesKeyTpl,
+  createdEventsKey,
   emailServer) => Promise.all([
     listFoldersInS3(bucket, userHomeKey),
     readObjectFromS3(bucket, processedEventsKey).catch(() => Promise.resolve([])),
@@ -311,7 +349,8 @@ const syncEvents = (bucket,
       users,
       processedEvents,
       syncDays);
-  }).then(events => processAllValidEvents(bucket, processedEventsKey, events, attendeesKeyTpl, emailServer));
+  }).then(events =>
+    processAllValidEvents(bucket, processedEventsKey, events, attendeesKeyTpl, createdEventsKey, emailServer));
 
 const refreshTokens = (bucket, userHomeKey, clientKeyTpl, tokenKeyTpl) => listFoldersInS3(bucket, userHomeKey)
     .then(users => Promise.all(users.map((user) => {
