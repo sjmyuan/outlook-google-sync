@@ -15,8 +15,9 @@ custom:
   google_client_key: 'config/users/=USER=/client/google.json'
   google_token_key: 'config/users/=USER=/token/google.json'
   user_info_key: 'config/users/=USER=/info.json'
-  attendees_key: 'config/attendees.json'
+  attendees_key: 'config/users/=USER=/attendees.json'
   processed_events_key: 'cache/events.json'
+  created_events_key: 'cache/createdEvents.json'
   user_home_key: 'config/users/'
   sync_days: 14
   home_bucket: 'outlook-google-sync-stg'
@@ -42,7 +43,7 @@ custom:
 
 provider:
   name: aws
-  runtime: nodejs6.10
+  runtime: nodejs10.x
   stage: stg
   region: ap-northeast-2
   timeout: 30
@@ -134,46 +135,6 @@ functions:
           path: ${self:custom.google_redirect_path}
           method: get
           cors: true
-          private: false
-  addAttendee:
-    handler: app.add_attendee
-    timeout: 15
-    events:
-      - http:
-          path: add/attendee
-          method: post
-          cors:
-            origins:
-              - '*'
-            headers:
-              - email-token
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-            allowCredentials: false
-          private: false
-  deleteAttendee:
-    handler: app.delete_attendee
-    timeout: 15
-    events:
-      - http:
-          path: delete/attendee
-          method: post
-          cors:
-            origins:
-              - '*'
-            headers:
-              - email-token
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-            allowCredentials: false
           private: false
   userLogin:
     handler: app.login_user
@@ -281,7 +242,7 @@ functions:
             allowCredentials: false
           private: false
   refreshOutlookToken:
-    handler: app.refresh_token 
+    handler: app.refresh_token
     environment:
       home_bucket: ${self:custom.home_bucket}
       user_home_key: ${self:custom.user_home_key}
@@ -290,7 +251,7 @@ functions:
     events:
       - schedule: rate(30 minutes)
   refreshGoogleToken:
-    handler: app.refresh_token 
+    handler: app.refresh_token
     environment:
       home_bucket: ${self:custom.home_bucket}
       user_home_key: ${self:custom.user_home_key}
@@ -308,6 +269,7 @@ functions:
       src_token_key: ${self:custom.outlook_token_key}
       tgt_token_key: ${self:custom.google_token_key}
       attendees_key: ${self:custom.attendees_key}
+      created_events_key: ${self:custom.created_events_key}
       sync_days: ${self:custom.sync_days}
       email_address: ${self:custom.email_address}
       email_password: ${self:custom.email_password}
@@ -325,12 +287,6 @@ resources:
       Properties:
         RetentionInDays: "1"
     GoogleAuthorizeLogGroup:
-      Properties:
-        RetentionInDays: "1"
-    AddAttendeeLogGroup:
-      Properties:
-        RetentionInDays: "1"
-    DeleteAttendeeLogGroup:
       Properties:
         RetentionInDays: "1"
     UserLoginLogGroup:

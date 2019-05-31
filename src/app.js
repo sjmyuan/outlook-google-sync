@@ -2,12 +2,9 @@ import _ from 'lodash';
 
 const oauth = require('simple-oauth2');
 
-import { getAuthUrl, getTokenFromCode, refreshAccessToken } from './authHelper';
 import {
   addUser,
-  addAttendees,
   updateAttendees,
-  deleteAttendees,
   syncEvents,
   refreshTokens,
   authorize,
@@ -89,7 +86,8 @@ module.exports.sync_events = (event) => {
   const srcTokenKeyTpl = process.env.src_token_key;
   const tgtTokenKeyTpl = process.env.tgt_token_key;
   const syncDays = process.env.sync_days;
-  const attendeesKey = process.env.attendees_key;
+  const attendeesKeyTpl = process.env.attendees_key;
+  const createdEventsKey = process.env.created_events_key;
   const emailAddress = process.env.email_address;
   const emailPassword = process.env.email_password;
   const emailServer = {
@@ -104,54 +102,14 @@ module.exports.sync_events = (event) => {
     srcTokenKeyTpl,
     tgtTokenKeyTpl,
     syncDays,
-    attendeesKey,
+    attendeesKeyTpl,
+    createdEventsKey,
     emailServer,
   ).then(() => {
     console.log('Success to sync events');
   }).catch((err) => {
     console.log(`Failed to sync events, error message is ${err}`);
   });
-};
-
-module.exports.add_attendee = (event, context, cb) => {
-  const bucket = _.get(event, 'stageVariables.home_bucket');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
-  const newAttendees = JSON.parse(event.body);
-  if (_.isNull(newAttendees)) {
-    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
-    console.log('Request body is null');
-    return false;
-  }
-  console.log(`New attendees is ${newAttendees}`);
-  addAttendees(newAttendees, bucket, attendeesKey)
-      .then(() => {
-        cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add attendees' });
-        console.log('Success to add attendee');
-      }).catch((err) => {
-        cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
-        console.log(`Failed to add attendee, error message is ${err}`);
-      });
-};
-
-module.exports.delete_attendee = (event, context, cb) => {
-  const bucket = _.get(event, 'stageVariables.home_bucket');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
-  const attendees = JSON.parse(event.body);
-  if (_.isNull(attendees)) {
-    cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Request body is null' });
-    console.log('Request body is null');
-    return false;
-  }
-  console.log('Delete attendees is:');
-  console.log(attendees);
-  deleteAttendees(attendees, bucket, attendeesKey)
-      .then(() => {
-        cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: 'Success to add attendees' });
-        console.log('Success to delete attendee');
-      }).catch((err) => {
-        cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
-        console.log(`Failed to delete attendee, error message is ${err}`);
-      });
 };
 
 module.exports.add_user = (event, context, cb) => {
@@ -224,10 +182,10 @@ module.exports.login_user = (event, context, cb) => {
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
   const googleTokenKeyTpl = _.get(event, 'stageVariables.google_token_key');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
+  const attendeesKeyTpl = _.get(event, 'stageVariables.attendees_key');
   const tokenKey = _.get(event, 'stageVariables.token_key');
 
-  getUserInfo(newUser.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
+  getUserInfo(newUser.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKeyTpl, '', '')
     .then((data) => {
       console.log('user info:');
       console.log(data);
@@ -251,14 +209,14 @@ module.exports.get_user_config = (event, context, cb) => {
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
   const googleTokenKeyTpl = _.get(event, 'stageVariables.google_token_key');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
+  const attendeesKeyTpl = _.get(event, 'stageVariables.attendees_key');
   const tokenKey = _.get(event, 'stageVariables.token_key');
   const token = _.get(event, 'headers.email-token');
   const googleLoginUrl = `https://${event.headers.Host}/${stage}/${googleLoginPath}?id=${userName}&token=${token}`;
   const outlookLoginUrl = `https://${event.headers.Host}/${stage}/${outlookLoginPath}?id=${userName}&token=${token}`;
 
   verify(token, tokenKey, userName).then(() => {
-    getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, googleLoginUrl, outlookLoginUrl)
+    getUserInfo(userName, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKeyTpl, googleLoginUrl, outlookLoginUrl)
       .then((data) => {
         delete data.info.password;
         cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
@@ -301,12 +259,12 @@ module.exports.save_user_config = (event, context, cb) => {
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
   const googleTokenKeyTpl = _.get(event, 'stageVariables.google_token_key');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
+  const attendeesKeyTpl = _.get(event, 'stageVariables.attendees_key');
   const tokenKey = _.get(event, 'stageVariables.token_key');
   const token = _.get(event, 'headers.email-token');
 
   verify(token, tokenKey, data.info.name).then(() => {
-    getUserInfo(data.info.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
+    getUserInfo(data.info.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKeyTpl, '', '')
       .then((oldInfo) => {
         const userInfo = oldInfo.info;
         userInfo.rooms = data.info.rooms;
@@ -314,7 +272,7 @@ module.exports.save_user_config = (event, context, cb) => {
 
         return Promise.all([
           saveUserBasicInfo(userInfo, bucket, userInfoKeyTpl),
-          updateAttendees(data.attendees, bucket, attendeesKey),
+          updateAttendees(data.attendees, bucket, attendeesKeyTpl, data.info.name),
         ]);
       }).then(() => {
         cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'success' });
@@ -330,19 +288,19 @@ module.exports.reset_password = (event, context, cb) => {
   console.log(event);
   const resetData = JSON.parse(event.body);
   if (!_.has(resetData, 'oldPassword')) {
-    cb(null, { statusCode: 400, body: 'can not find old password' });
+    cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find old password' });
     console.log('can not find old password');
     return false;
   }
 
   if (!_.has(resetData, 'newPassword')) {
-    cb(null, { statusCode: 400, body: 'can not find new password' });
+    cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find new password' });
     console.log('can not find new password');
     return false;
   }
 
   if (!_.has(resetData, 'name')) {
-    cb(null, { statusCode: 400, body: 'can not find name' });
+    cb(null, { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'can not find name' });
     console.log('can not find name');
     return false;
   }
@@ -351,9 +309,9 @@ module.exports.reset_password = (event, context, cb) => {
   const userInfoKeyTpl = _.get(event, 'stageVariables.user_info_key');
   const outlookTokenKeyTpl = _.get(event, 'stageVariables.outlook_token_key');
   const googleTokenKeyTpl = _.get(event, 'stageVariables.google_token_key');
-  const attendeesKey = _.get(event, 'stageVariables.attendees_key');
+  const attendeesKeyTpl = _.get(event, 'stageVariables.attendees_key');
 
-  getUserInfo(resetData.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKey, '', '')
+  getUserInfo(resetData.name, bucket, userInfoKeyTpl, googleTokenKeyTpl, outlookTokenKeyTpl, attendeesKeyTpl, '', '')
     .then((data) => {
       console.log('user info:');
       console.log(data);
@@ -361,12 +319,12 @@ module.exports.reset_password = (event, context, cb) => {
       if (!_.has(userInfo, 'password') || bcrypt.compareSync(resetData.oldPassword, userInfo.password)) {
         userInfo.password = bcrypt.hashSync(resetData.newPassword);
         return saveUserBasicInfo(userInfo, bucket, userInfoKeyTpl).then(() => {
-          cb(null, { statusCode: 200, body: JSON.stringify('success') });
+          cb(null, { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify('success') });
         });
       }
       cb(null, { statusCode: 401 });
       return '';
     }).catch((err) => {
-      cb(null, { statusCode: 500, body: JSON.stringify(err) });
+      cb(null, { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(err) });
     });
 };
