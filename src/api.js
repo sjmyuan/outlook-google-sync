@@ -308,6 +308,8 @@ const processCreateMessage = (server, message, attendees) =>
         }).finally(() => []);
     });
 
+const flatArray = arr => [].concat(...arr);
+
 const processAllValidEvents = (bucket, tgtTokenKeyTpl, createdEventsKey, processedEventsKey, totalEvents, attendeesKeyTpl, server) =>
   writeObjectToS3(bucket, processedEventsKey, totalEvents.allEvents)
     .then(() => {
@@ -323,7 +325,7 @@ const processAllValidEvents = (bucket, tgtTokenKeyTpl, createdEventsKey, process
           .catch(() => Promise.resolve([]))
           .then(attendees =>
             processCreateMessage(server, event, attendees))))
-        .then(processedGoogleEvents => recordCreatedEvent(bucket, createdEventsKey, totalEvents.allEvents, processedGoogleEvents.flat(1)));
+        .then(processedGoogleEvents => recordCreatedEvent(bucket, createdEventsKey, totalEvents.allEvents, flatArray(processedGoogleEvents)));
       return deleteOperation.then(() => createOperation);
     });
 
