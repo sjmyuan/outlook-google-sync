@@ -27,7 +27,7 @@
     "coveralls": "cat ./coverage/lcov.info | coveralls -v"
   },
   "dependencies": {
-    "aws-sdk": "^2.80.0",
+    "aws-sdk": "^2.814.0",
     "babel-loader": "^7.1.1",
     "babel-polyfill": "^6.23.0",
     "babel-register": "^6.18.0",
