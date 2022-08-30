@@ -35,7 +35,7 @@
     "bcrypt-nodejs": "0.0.3",
     "jsonwebtoken": "^7.4.3",
     "lodash": "^4.17.4",
-    "moment-timezone": "^0.5.13",
+    "moment-timezone": "^0.5.35",
     "node-uuid": "^1.4.8",
     "nodemailer": "^4.0.1",
     "request": "^2.81.0",
